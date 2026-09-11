@@ -1,0 +1,14 @@
+[
+  { 
+    "id": 1,
+    "especialidad": "Psicología" 
+  },
+  { 
+    "id": 2, 
+    "especialidad": "Musicaterapia" 
+  },
+  { 
+    "id": 3, 
+    "especialidad": "Psiquiatría" 
+  }
+]

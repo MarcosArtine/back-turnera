@@ -1,0 +1,25 @@
+extends layout 
+
+block content
+  h2 Lista de Turnos
+  if turnos.length > 0
+    table
+      thead
+        tr
+          th ID
+          th Nombre del Paciente
+          th Fecha y Hora
+          th Especialidad
+          th Acciones
+      tbody
+        each turno in turnos
+          tr
+            td= turno.id
+            td= turno.nombrePaciente
+            td= new Date(turno.fechaHora).toLocaleString()
+            td= turno.especialidad
+            td
+              |  | 
+              a(href=`/turnos/${turno.id}/eliminar`) Eliminar
+  else
+    p No hay turnos disponibles.

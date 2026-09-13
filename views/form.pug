@@ -1,0 +1,21 @@
+extends layout
+
+block content
+  h2 Formulario de Turno
+  form(method="POST", action="/turnos")
+    div
+      label(for="nombrePaciente") Nombre del Paciente:
+      input(type="text", id="nombrePaciente", name="nombrePaciente", required)
+    div
+      label(for="apellidoPaciente") Apellido del Paciente:
+      input(type="text", id="apellidoPaciente", name="apellidoPaciente", required)
+    div
+      label(for="fechaHora") Fecha y Hora:
+      input(type="datetime-local", id="fechaHora", name="fechaHora", required)
+    div
+      label(for="especialidad") Especialidad:
+      select(id="especialidad", name="especialidad", required)
+        option(value="Terapia Cognitivo-Conductual") Terapia Cognitivo-Conductual
+        option(value="Psiquiatría") Psiquiatría
+        option(value="Psicoanálisis") Psicoanálisis
+    button(type="submit") Guardar Turno

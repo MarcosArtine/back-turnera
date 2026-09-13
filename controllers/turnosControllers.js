@@ -1,21 +1,20 @@
 const fs = require("fs"); // Importar el módulo fs para leer y escribir archivos
 const path = require("path"); // Importar el módulo path para manejar rutas de archivos
 
-const turno = require("../data/database.json"); // Importar el archivo database.json
-
-const rutasTurnos = path.join(__dirname, "../routes/turnosRoutes.js"); // Ruta del archivo turnosRoutes.js
+// Apuntamos a la base de datos JSON
+const rutaDatabase = path.join(__dirname, "../data/database.json");
 
 
 //función para leer los turnos desde el archivo database.json
 function leerTurnos() {
-  const Data = fs.readFileSync(rutasTurnos, "utf-8"); // Leer el contenido del archivo turnosRoutes.js
+  const Data = fs.readFileSync(rutaDatabase, "utf-8"); // Leer el contenido del archivo database.json
   return JSON.parse(Data)
 }
 
 //funcion para guardar los turnos en el archivo database.json
 function guardarTurnos(turnos) {
   const Data = JSON.stringify(turnos, null, 2);
-  fs.writeFileSync(rutasTurnos, Data, "utf-8");
+  fs.writeFileSync(rutaDatabase, Data, "utf-8");
 }
 
 
@@ -43,8 +42,9 @@ const obtenerTurnoPorId = (req, res) => {
 const agregarTurno = (req, res) => {
   const { id, especialidad } = req.body;
   const nuevoTurno = { id, especialidad };
-  turno.push(nuevoTurno);
-  guardarTurnos(turno); 
+  const turnos = leerTurnos();
+  turnos.push(nuevoTurno);
+  guardarTurnos(turnos);
   res.status(201).json({ // Devuelve un mensaje de éxito y el turno agregado
     mensaje: "Turno agregado con éxito",
     tema: nuevoTurno
@@ -55,7 +55,8 @@ const agregarTurno = (req, res) => {
 const actualizarTurno = (req, res) => {
   const id = parseInt(req.params.id);
   const { especialidad } = req.body;
-  const turnoIndex = turno.findIndex(t => t.id === id);
+  const turnos = leerTurnos();
+  const turnoIndex = turnos.findIndex(t => t.id === id);
 
   // Verificamos si el turno existe
   if (turnoIndex === -1) {
@@ -63,8 +64,8 @@ const actualizarTurno = (req, res) => {
   }
 
   // Actualizar la especialidad del turno en la posición de turnoIndex
-  turno[turnoIndex].especialidad = especialidad;
-  guardarTurnos(turno);
+  turnos[turnoIndex].especialidad = especialidad;
+  guardarTurnos(turnos);
   res.status(200).json({
     mensaje: "Turno actualizado con éxito",
     tema: turno[turnoIndex]
@@ -90,6 +91,7 @@ const eliminarTurno = (req, res) => {
 
 // Exportamos las funciones para que puedan ser utilizadas en otros archivos
 module.exports = {
+  leerTurnos,
   obtenerTurnos,
   obtenerTurnoPorId,
   agregarTurno,

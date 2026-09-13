@@ -9,6 +9,7 @@ const {leerTurnos} = require("./controllers/turnosControllers"); // Importar los
 const turnosRoutes = require("./routes/turnosRoutes"); // Importar las rutas de turnos
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Configuración de Pug como motor de plantillas
 app.set("view engine", "pug"); // Establecer Pug como motor de vistas

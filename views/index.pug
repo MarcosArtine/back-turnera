@@ -8,17 +8,22 @@ block content
         tr
           th ID
           th Nombre del Paciente
+          th Apellido del Paciente
           th Fecha y Hora
           th Especialidad
+          th Estado
           th Acciones
       tbody
         each turno in turnos
           tr
-            td= turno.id
+            td= turno.id_turno
             td= turno.nombrePaciente
-            td= new Date(turno.fechaHora).toLocaleString()
+            td= turno.apellidoPaciente
+            td= new Date(turno.fecha_hora_inicio).toLocaleString()
             td= turno.especialidad
+            td= turno.estado
             td
+              a(href=`/nuevoTurno`) Editar
               |  | 
               a(href=`/turnos/${turno.id}/eliminar`) Eliminar
   else

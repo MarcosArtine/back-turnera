@@ -1,0 +1,20 @@
+[
+  {
+    "id_especialidad": 101,
+    "nombre_especialidad": "Psicoanálisis",
+    "descripcion": "Enfoque clínico psicodinámico",
+    "duracion_turno_default": 45
+  },
+  {
+    "id_especialidad": 102,
+    "nombre_especialidad": "Psiquiatría",
+    "descripcion": "Tratamiento de trastornos mentales",
+    "duracion_turno_default": 30
+  },
+  {
+    "id_especialidad": 103,
+    "nombre_especialidad": "Terapia Cognitivo-Conductual",
+    "descripcion": "Enfoque terapéutico basado en la cognición y el comportamiento",
+    "duracion_turno_default": 45
+  }
+]

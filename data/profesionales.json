@@ -1,0 +1,38 @@
+[
+  {
+    "id_profesional": 201,
+    "nombre": "Carlos",
+    "apellido": "Gómez",
+    "matricula_profesional": "MP-9876",
+    "id_especialidad": 101,
+    "telefono": "1188990011",
+    "correo_electronico": "carlos@email.com"
+  },
+  {
+    "id_profesional": 202,
+    "nombre": "María",
+    "apellido": "López",
+    "matricula_profesional": "MP-5432",
+    "id_especialidad": 102,
+    "telefono": "1188990022",
+    "correo_electronico": "maria@email.com"
+  },
+  {
+    "id_profesional": 203,
+    "nombre": "Ana",
+    "apellido": "Martínez",
+    "matricula_profesional": "MP-2468",
+    "id_especialidad": 103,
+    "telefono": "1188990033",
+    "correo_electronico": "ana@email.com"
+  },
+  {
+    "id_profesional": 204,
+    "nombre": "Luis",
+    "apellido": "Ramírez",
+    "matricula_profesional": "MP-1357",
+    "id_especialidad": 101,
+    "telefono": "1188990044",
+    "correo_electronico": "luis@email.com"
+  }
+]

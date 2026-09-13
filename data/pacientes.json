@@ -1,0 +1,47 @@
+[
+  {
+    "id_paciente": 1,
+    "nombre": "Juan",
+    "apellido": "Peréz",
+    "dni": "12345678",
+    "fecha_nacimiento": "1990-05-15",
+    "telefono": "1122334455",
+    "correo_electronico": "juan@email.com"
+  },
+  {
+    "id_paciente": 2,
+    "nombre": "María",
+    "apellido": "Gómez",
+    "dni": "87654321",
+    "fecha_nacimiento": "1985-10-20",
+    "telefono": "2233445566",
+    "correo_electronico": "maria@email.com"
+  },
+  {
+    "id_paciente": 3,
+    "nombre": "Carlos",
+    "apellido": "López",
+    "dni": "56781234",
+    "fecha_nacimiento": "1995-03-10",
+    "telefono": "3344556677",
+    "correo_electronico": "carlos@email.com"
+  },
+  {
+    "id_paciente": 4,
+    "nombre": "Ana",
+    "apellido": "Martínez",
+    "dni": "43218765",
+    "fecha_nacimiento": "1992-07-25",
+    "telefono": "4455667788",
+    "correo_electronico": "ana@email.com"
+  },
+  {
+    "id_paciente": 5,
+    "nombre": "Luis",
+    "apellido": "Ramírez",
+    "dni": "34567812",
+    "fecha_nacimiento": "1988-12-05",
+    "telefono": "5566778899",
+    "correo_electronico": "luis@email.com"
+  }
+]

@@ -23,8 +23,9 @@ block content
             td= turno.especialidad
             td= turno.estado
             td
-              a(href=`/nuevoTurno`) Editar
-              |  | 
-              a(href=`/turnos/${turno.id}/eliminar`) Eliminar
+              a(href=`/nuevoTurno`) Editar NO IMPLEMENTADO
+              |  |
+              form(method="POST", action=`/turnos/${turno.id_turno}/eliminar`, style="display:inline")
+                button(type="submit", onclick="return confirm('¿Está seguro de eliminar este turno?')") Eliminar
   else
     p No hay turnos disponibles.

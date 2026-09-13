@@ -1,16 +1,5 @@
 [
   {
-    "id_turno": 1,
-    "id_paciente": 1,
-    "id_profesional": 201,
-    "nombrePaciente": "Juan",
-    "apellidoPaciente": "Pérez",
-    "especialidad": "Psicoanálisis",
-    "fecha_hora_inicio": "2026-09-13T10:00:00",
-    "fecha_hora_fin": "2026-09-13T10:45:00",
-    "estado": "Reservado"
-  },
-  {
     "id_turno": 2,
     "id_paciente": 2,
     "id_profesional": 202,
@@ -19,17 +8,6 @@
     "especialidad": "Psicoanálisis",
     "fecha_hora_inicio": "2026-09-13T15:30:00",
     "fecha_hora_fin": "2026-09-13T16:15:00",
-    "estado": "Reservado"
-  },
-  {
-    "id_turno": 3,
-    "id_paciente": 3,
-    "id_profesional": 203,
-    "nombrePaciente": "Carlos",
-    "apellidoPaciente": "López",
-    "especialidad": "Psiquiatría",
-    "fecha_hora_inicio": "2026-09-14T09:00:00",
-    "fecha_hora_fin": "2026-09-14T09:45:00",
     "estado": "Reservado"
   },
   {

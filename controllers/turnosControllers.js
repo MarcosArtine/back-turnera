@@ -89,8 +89,12 @@ const agregarTurno = (req, res) => {
   if (!Number.isFinite(inicio.getTime())) {
     return res.status(400).json({ mensaje: "La fecha y hora de inicio no son válidas" });
   }
+
+  // Calculamos la fecha y hora de fin sumando la duración del turno a la fecha y hora de inicio
   const fin = new Date(inicio.getTime() + especialidadEncontrada.duracion_turno_default * 60 * 1000);
   const siguienteId = turnos.reduce((mayor, turno) => Math.max(mayor, Number(turno.id_turno) || 0), 0) + 1;
+
+  // Creamos un nuevo objeto turno con los datos proporcionados y la fecha y hora de fin calculada
   const nuevoTurno = {
     id_turno: siguienteId,
     id_paciente: paciente.id_paciente,
@@ -147,6 +151,12 @@ const eliminarTurno = (req, res) => {
   // Eliminamos el turno de la lista
   turnos.splice(turnoIndex, 1);
   guardarTurnos(turnos);
+
+  // Si la solicitud es un POST, redirigimos a la página principal
+  if (req.method === "POST") {
+    return res.redirect("/");
+  }
+
   res.json({ mensaje: "Turno eliminado con éxito" });
 }
 

@@ -18,4 +18,6 @@ router.post("/", agregarTurno);
 router.put("/:id", actualizarTurno);
 router.delete("/:id/eliminar", eliminarTurno);
 
+router.post("/:id/eliminar", eliminarTurno); // Ruta para redirigimos a la página principal cuando se elimina un turno desde la vista
+
 module.exports = router;

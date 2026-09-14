@@ -1,0 +1,24 @@
+extends layout
+
+block content
+  h2= editando ? 'Editar Paciente' : 'Nuevo Paciente'
+  form(method="POST", action=editando ? `/pacientes/${paciente.id_paciente}/editar` : "/pacientes")
+    div
+      label(for="nombre") Nombre:
+      input(type="text", id="nombre", name="nombre", value=paciente ? paciente.nombre : '', required)
+    div
+      label(for="apellido") Apellido:
+      input(type="text", id="apellido", name="apellido", value=paciente ? paciente.apellido : '', required)
+    div
+      label(for="dni") DNI:
+      input(type="text", id="dni", name="dni", value=paciente ? paciente.dni : '', required)
+    div
+      label(for="fecha_nacimiento") Fecha de Nacimiento:
+      input(type="date", id="fecha_nacimiento", name="fecha_nacimiento", value=paciente ? paciente.fecha_nacimiento : '', required)
+    div
+      label(for="telefono") Teléfono:
+      input(type="text", id="telefono", name="telefono", value=paciente ? paciente.telefono : '', required)
+    div
+      label(for="email") Email:
+      input(type="email", id="email", name="email", value=paciente ? paciente.email : '', required)
+    button(type="submit")= editando ? 'Guardar cambios' : 'Agregar paciente'

@@ -25,14 +25,5 @@
     "id_especialidad": 103,
     "telefono": "1188990033",
     "correo_electronico": "ana@email.com"
-  },
-  {
-    "id_profesional": 204,
-    "nombre": "Luis",
-    "apellido": "Ramírez",
-    "matricula_profesional": "MP-1357",
-    "id_especialidad": 101,
-    "telefono": "1188990044",
-    "correo_electronico": "luis@email.com"
   }
 ]

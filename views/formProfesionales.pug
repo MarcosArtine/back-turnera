@@ -1,0 +1,27 @@
+extends layout
+block content
+  h2= editando ? 'Editar Profesional' : 'Nuevo Profesional'
+  form(method="POST", action=editando ? `/profesionales/${profesional.id_profesional}/editar` : "/profesionales")
+    div
+      label(for="nombre") Nombre:
+      input(type="text", id="nombre", name="nombre", value=profesional ? profesional.nombre : '', required)
+    div
+      label(for="apellido") Apellido:
+      input(type="text", id="apellido", name="apellido", value=profesional ? profesional.apellido : '', required)
+    div
+      label(for="matricula_profesional") Matrícula profesional:
+      input(type="text", id="matricula_profesional", name="matricula_profesional", value=profesional ? profesional.matricula_profesional : '', required)
+    div
+      label(for="id_especialidad") Especialidad:
+      select(id="id_especialidad", name="id_especialidad", required)
+        option(value="") Seleccione una especialidad
+        each especialidad in especialidades
+          option(value=especialidad.id_especialidad, selected=profesional && profesional.id_especialidad === especialidad.id_especialidad)= especialidad.nombre_especialidad
+    div
+      label(for="telefono") Teléfono:
+      input(type="text", id="telefono", name="telefono", value=profesional ? profesional.telefono : '', required)
+    div
+      label(for="correo_electronico") Email:
+      input(type="email", id="correo_electronico", name="correo_electronico", value=profesional ? profesional.correo_electronico : '', required)
+    div
+      button(type="submit")= editando ? 'Actualizar Profesional' : 'Agregar Profesional'

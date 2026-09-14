@@ -1,0 +1,34 @@
+extends layout 
+
+block content
+  h2 Lista de Profesionales
+  form(method="GET", action="/profesionales/nuevo")
+    button(type="submit") Nuevo Profesional
+  if profesionales.length > 0
+    table
+      thead
+        tr
+          th ID
+          th Nombre
+          th Apellido
+          th Especialidad
+          th Teléfono
+          th Email
+          th Acciones
+      tbody
+        each profesional in profesionales
+          tr
+            td= profesional.id_profesional
+            td= profesional.nombre
+            td= profesional.apellido
+            td= profesional.id_especialidad
+            td= profesional.telefono
+            td= profesional.correo_electronico
+            td
+              form(method="GET", action=`/profesionales/${profesional.id_profesional}/editar`, style="display:inline")
+                button(type="submit") Editar
+              |  |
+              form(method="POST", action=`/profesionales/${profesional.id_profesional}/eliminar`, style="display:inline")
+                button(type="submit", onclick="return confirm('¿Está seguro de eliminar este profesional?')") Eliminar
+  else
+    p No hay profesionales disponibles.

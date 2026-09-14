@@ -2,6 +2,8 @@ extends layout
 
 block content
   h2 Lista de Turnos
+  form(method="GET", action="/turnos/nuevo")
+    button(type="submit") Nuevo Turno
   if turnos.length > 0
     table
       thead
@@ -23,7 +25,8 @@ block content
             td= turno.especialidad
             td= turno.estado
             td
-              a(href=`/nuevoTurno`) Editar NO IMPLEMENTADO
+              form(method="GET", action=`/turnos/${turno.id_turno}/editar`, style="display:inline")
+                button(type="submit") Editar
               |  |
               form(method="POST", action=`/turnos/${turno.id_turno}/eliminar`, style="display:inline")
                 button(type="submit", onclick="return confirm('¿Está seguro de eliminar este turno?')") Eliminar

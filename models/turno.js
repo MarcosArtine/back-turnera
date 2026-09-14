@@ -1,5 +1,5 @@
 class Turno {
-  constructor(id_turno, id_paciente, id_profesional, fecha_hora_inicio, fecha_hora_fin, estado) {
+  constructor(id_turno, id_paciente, id_profesional, nombrePaciente, apellidoPaciente, especialidad, fecha_hora_inicio, fecha_hora_fin, estado) {
     this.id_turno = id_turno;
     this.id_paciente = id_paciente;
     this.id_profesional = id_profesional;

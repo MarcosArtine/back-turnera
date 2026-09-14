@@ -1,0 +1,36 @@
+extends layout 
+
+block content
+  h2 Lista de Pacientes
+  form(method="GET", action="/pacientes/nuevo")
+    button(type="submit") Nuevo Paciente
+  if pacientes.length > 0
+    table
+      thead
+        tr
+          th ID
+          th Nombre
+          th Apellido
+          th DNI 
+          th Fecha de Nacimiento
+          th Teléfono
+          th Email
+          th Acciones
+      tbody
+        each paciente in pacientes
+          tr
+            td= paciente.id_paciente
+            td= paciente.nombre
+            td= paciente.apellido
+            td= paciente.dni
+            td= paciente.fecha_nacimiento
+            td= paciente.telefono
+            td= paciente.email
+            td
+              form(method="GET", action=`/pacientes/${paciente.id_paciente}/editar`, style="display:inline")
+                button(type="submit") Editar
+              |  |
+              form(method="POST", action=`/pacientes/${paciente.id_paciente}/eliminar`, style="display:inline")
+                button(type="submit", onclick="return confirm('¿Está seguro de eliminar este paciente?')") Eliminar
+  else
+    p No hay pacientes disponibles.

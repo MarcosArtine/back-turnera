@@ -1,0 +1,20 @@
+extends layout
+block content
+  h2= editando ? 'Editar Turno' : 'Formulario de Turno'
+  form(method="POST", action=editando ? `/turnos/${turno.id_turno}/editar` : "/turnos")
+    div
+      label(for="nombrePaciente") Nombre del Paciente:
+      input(type="text", id="nombrePaciente", name="nombrePaciente", value=turno ? turno.nombrePaciente : '', required)
+    div
+      label(for="apellidoPaciente") Apellido del Paciente:
+      input(type="text", id="apellidoPaciente", name="apellidoPaciente", value=turno ? turno.apellidoPaciente : '', required)
+    div
+      label(for="fechaHora") Fecha y Hora:
+      input(type="datetime-local", id="fechaHora", name="fechaHora", value=turno ? turno.fecha_hora_inicio.slice(0, 16) : '', required)
+    div
+      label(for="especialidad") Especialidad:
+      select(id="especialidad", name="especialidad", required)
+        option(value="") Seleccione una especialidad
+        each especialidad in especialidades
+          option(value=especialidad.nombre_especialidad, selected=turno && turno.especialidad === especialidad.nombre_especialidad)= especialidad.nombre_especialidad
+    button(type="submit")= editando ? 'Actualizar Turno' : 'Guardar Turno'

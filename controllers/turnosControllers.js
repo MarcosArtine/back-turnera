@@ -24,6 +24,7 @@ function leerJson(ruta) {
   return JSON.parse(fs.readFileSync(ruta, "utf-8"));
 }
 
+// Función para normalizar texto eliminando acentos y convirtiendo a minúsculas
 function normalizarTexto(texto) {
   return String(texto ?? "")
     .normalize("NFD")
@@ -35,6 +36,38 @@ function normalizarTexto(texto) {
 function formatearFechaLocal(fecha) {
   const completar = valor => String(valor).padStart(2, "0");
   return `${fecha.getFullYear()}-${completar(fecha.getMonth() + 1)}-${completar(fecha.getDate())}T${completar(fecha.getHours())}:${completar(fecha.getMinutes())}:00`;
+}
+
+function obtenerDatosTurno(req) {
+  const { nombrePaciente, apellidoPaciente, especialidad, fechaHora, fecha_hora_inicio } = req.body;
+  const pacientes = leerJson(rutaPacientes);
+  const profesionales = leerJson(rutaProfesionales);
+  const especialidades = leerJson(rutaEspecialidades);
+  const paciente = pacientes.find(item =>
+    normalizarTexto(item.nombre) === normalizarTexto(nombrePaciente) &&
+    normalizarTexto(item.apellido) === normalizarTexto(apellidoPaciente)
+  );
+  const especialidadEncontrada = especialidades.find(item =>
+    normalizarTexto(item.nombre_especialidad) === normalizarTexto(especialidad)
+  );
+
+  if (!paciente) return { error: "Paciente no encontrado" };
+  if (!especialidadEncontrada) return { error: "Especialidad no encontrada" };
+
+  const profesional = profesionales.find(item => item.id_especialidad === especialidadEncontrada.id_especialidad);
+  if (!profesional) return { error: "No hay un profesional para esa especialidad" };
+
+  const inicio = new Date(fecha_hora_inicio || fechaHora);
+  if (!Number.isFinite(inicio.getTime())) return { error: "La fecha y hora de inicio no son válidas" };
+
+  const fin = new Date(inicio.getTime() + especialidadEncontrada.duracion_turno_default * 60 * 1000);
+  return {
+    paciente,
+    profesional,
+    especialidad: especialidadEncontrada,
+    fecha_hora_inicio: formatearFechaLocal(inicio),
+    fecha_hora_fin: formatearFechaLocal(fin)
+  };
 }
 
 
@@ -61,49 +94,22 @@ const obtenerTurnoPorId = (req, res) => {
 // POST -> agregar un nuevo turno
 const agregarTurno = (req, res) => {
   const turnos = leerTurnos();
-  const { nombrePaciente, apellidoPaciente, especialidad, fechaHora, fecha_hora_inicio } = req.body;
-  const pacientes = leerJson(rutaPacientes);
-  const profesionales = leerJson(rutaProfesionales);
-  const especialidades = leerJson(rutaEspecialidades);
-  const paciente = pacientes.find(paciente =>
-    normalizarTexto(paciente.nombre) === normalizarTexto(nombrePaciente) &&
-    normalizarTexto(paciente.apellido) === normalizarTexto(apellidoPaciente)
-  );
-  const especialidadEncontrada = especialidades.find(item =>
-    normalizarTexto(item.nombre_especialidad) === normalizarTexto(especialidad)
-  );
+  const datos = obtenerDatosTurno(req);
 
-  if (!paciente) {
-    return res.status(400).json({ mensaje: "Paciente no encontrado" });
-  }
-  if (!especialidadEncontrada) {
-    return res.status(400).json({ mensaje: "Especialidad no encontrada" });
+  if (datos.error) {
+    return res.status(400).json({ mensaje: datos.error });
   }
 
-  const profesional = profesionales.find(item => item.id_especialidad === especialidadEncontrada.id_especialidad);
-  if (!profesional) {
-    return res.status(400).json({ mensaje: "No hay un profesional para esa especialidad" });
-  }
-
-  const inicio = new Date(fecha_hora_inicio || fechaHora);
-  if (!Number.isFinite(inicio.getTime())) {
-    return res.status(400).json({ mensaje: "La fecha y hora de inicio no son válidas" });
-  }
-
-  // Calculamos la fecha y hora de fin sumando la duración del turno a la fecha y hora de inicio
-  const fin = new Date(inicio.getTime() + especialidadEncontrada.duracion_turno_default * 60 * 1000);
   const siguienteId = turnos.reduce((mayor, turno) => Math.max(mayor, Number(turno.id_turno) || 0), 0) + 1;
-
-  // Creamos un nuevo objeto turno con los datos proporcionados y la fecha y hora de fin calculada
   const nuevoTurno = {
     id_turno: siguienteId,
-    id_paciente: paciente.id_paciente,
-    id_profesional: profesional.id_profesional,
-    nombrePaciente: paciente.nombre,
-    apellidoPaciente: paciente.apellido,
-    especialidad: especialidadEncontrada.nombre_especialidad,
-    fecha_hora_inicio: formatearFechaLocal(inicio),
-    fecha_hora_fin: formatearFechaLocal(fin),
+    id_paciente: datos.paciente.id_paciente,
+    id_profesional: datos.profesional.id_profesional,
+    nombrePaciente: datos.paciente.nombre,
+    apellidoPaciente: datos.paciente.apellido,
+    especialidad: datos.especialidad.nombre_especialidad,
+    fecha_hora_inicio: datos.fecha_hora_inicio,
+    fecha_hora_fin: datos.fecha_hora_fin,
     estado: "Reservado"
   };
 
@@ -126,16 +132,60 @@ const actualizarTurno = (req, res) => {
     return res.status(404).json({ mensaje: "Turno no encontrado" });
   }
 
-  // Actualizamos los datos del turno
-  turnos[turnoIndex] = { ...turnos[turnoIndex], ...req.body };
+  // Obtenemos los datos del turno desde la solicitud
+  const datos = obtenerDatosTurno(req);
+  if (datos.error) {
+    return res.status(400).json({ mensaje: datos.error });
+  }
+
+  // Actualizamos los datos del turno existente con los nuevos datos proporcionados
+  turnos[turnoIndex] = {
+    ...turnos[turnoIndex],
+    id_paciente: datos.paciente.id_paciente,
+    id_profesional: datos.profesional.id_profesional,
+    nombrePaciente: datos.paciente.nombre,
+    apellidoPaciente: datos.paciente.apellido,
+    especialidad: datos.especialidad.nombre_especialidad,
+    fecha_hora_inicio: datos.fecha_hora_inicio,
+    fecha_hora_fin: datos.fecha_hora_fin
+  };
 
   guardarTurnos(turnos);
+  if (req.method === "POST") {
+    return res.redirect("/");
+  }
+
   res.status(200).json({
     mensaje: "Turno actualizado con éxito",
     turno: turnos[turnoIndex]
   }); // Devuelve un mensaje de éxito (denuevo no hace falta el status(200)) y el turno actualizado
 };
 
+
+// GET -> mostrar el formulario de edición de un turno
+const mostrarFormularioNuevo = (req, res) => {
+  res.render("formTurnos", {
+    title: "Nuevo Turno",
+    message: "Complete el formulario para crear un nuevo turno.",
+    turno: null,
+    editando: false,
+    especialidades: leerJson(rutaEspecialidades)
+  });
+};
+
+const mostrarFormularioEdicion = (req, res) => {
+  const id = parseInt(req.params.id);
+  const turno = leerTurnos().find(item => item.id_turno === id);
+  if (!turno) return res.status(404).send("Turno no encontrado");
+
+  res.render("formTurnos", {
+    title: "Editar Turno",
+    message: "Modifique los datos del turno.",
+    turno,
+    editando: true,
+    especialidades: leerJson(rutaEspecialidades)
+  });
+};
 
 // DELETE -> eliminar un turno existente
 const eliminarTurno = (req, res) => {
@@ -163,6 +213,8 @@ const eliminarTurno = (req, res) => {
 // Exportamos las funciones para que puedan ser utilizadas en otros archivos
 module.exports = {
   leerTurnos,
+  mostrarFormularioNuevo,
+  mostrarFormularioEdicion,
   obtenerTurnos,
   obtenerTurnoPorId,
   agregarTurno,

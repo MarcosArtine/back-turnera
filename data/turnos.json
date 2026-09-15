@@ -11,17 +11,6 @@
     "estado": "Reservado"
   },
   {
-    "id_turno": 2,
-    "id_paciente": 2,
-    "id_profesional": 201,
-    "nombrePaciente": "María",
-    "apellidoPaciente": "Gómez",
-    "especialidad": "Psicoanálisis",
-    "fecha_hora_inicio": "2026-09-15T16:30:00",
-    "fecha_hora_fin": "2026-09-15T17:15:00",
-    "estado": "Reservado"
-  },
-  {
     "id_turno": 3,
     "id_paciente": 3,
     "id_profesional": 202,
@@ -45,13 +34,13 @@
   },
   {
     "id_turno": 5,
-    "id_paciente": 5,
+    "id_paciente": 1,
     "id_profesional": 203,
-    "nombrePaciente": "Luis",
-    "apellidoPaciente": "Martínez",
+    "nombrePaciente": "Juan",
+    "apellidoPaciente": "Peréz",
     "especialidad": "Terapia Cognitivo-Conductual",
-    "fecha_hora_inicio": "2026-09-16T12:30:00",
-    "fecha_hora_fin": "2026-09-16T13:15:00",
+    "fecha_hora_inicio": "2026-09-15T15:30:00",
+    "fecha_hora_fin": "2026-09-15T16:15:00",
     "estado": "Reservado"
   },
   {
@@ -63,6 +52,17 @@
     "especialidad": "Terapia Cognitivo-Conductual",
     "fecha_hora_inicio": "2026-09-16T13:30:00",
     "fecha_hora_fin": "2026-09-16T14:15:00",
+    "estado": "Reservado"
+  },
+  {
+    "id_turno": 7,
+    "id_paciente": 1,
+    "id_profesional": 203,
+    "nombrePaciente": "Juan",
+    "apellidoPaciente": "Peréz",
+    "especialidad": "Terapia Cognitivo-Conductual",
+    "fecha_hora_inicio": "2026-09-15T15:30:00",
+    "fecha_hora_fin": "2026-09-15T16:15:00",
     "estado": "Reservado"
   }
 ]

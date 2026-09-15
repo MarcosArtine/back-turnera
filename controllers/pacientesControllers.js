@@ -18,7 +18,7 @@ function siguienteId(registros, campo) {
 }
 
 function obtenerPacientes(req, res) {
-  res.render("listPacientes", { pacientes: leerPacientes() });
+  res.render("listPacientes", { pacientes : leerPacientes() });
 }
 
 function mostrarFormularioNuevo(req, res) {
@@ -71,6 +71,7 @@ function mostrarFormularioEdicion(req, res) {
   res.render("formPacientes", { paciente, editando: true });
 }
 
+// Función para editar un paciente existente
 function editarPaciente(req, res) {
   const id = parseInt(req.params.id, 10);
   const pacientes = leerPacientes();
@@ -99,6 +100,7 @@ function editarPaciente(req, res) {
   res.json({ mensaje: "Paciente actualizado con éxito", paciente: pacientes[pacienteIndex] });
 }
 
+// Función para eliminar un paciente existente
 function eliminarPaciente(req, res) {
   const id = parseInt(req.params.id, 10);
   const pacientes = leerPacientes();

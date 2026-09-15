@@ -27,12 +27,12 @@
     "email": "ana@email.com"
   },
   {
-    "id_paciente": 5,
-    "nombre": "Luis",
-    "apellido": "Ramírez",
-    "dni": "34567812",
-    "fecha_nacimiento": "1988-12-05",
-    "telefono": "5566778899",
-    "email": "luis@email.com"
+    "id_paciente": 6,
+    "nombre": "Marcos",
+    "apellido": "Artine",
+    "dni": "43218765",
+    "fecha_nacimiento": "1992-04-05",
+    "telefono": "1155667788",
+    "email": "marcos@email.com"
   }
 ]

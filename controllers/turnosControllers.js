@@ -1,223 +1,202 @@
-const fs = require("fs"); // Importar el módulo fs para leer y escribir archivos
-const path = require("path"); // Importar el módulo path para manejar rutas de archivos
+import mongoose from "mongoose";
+import Especialidad from "../models/especialidad.js";
+import Paciente from "../models/paciente.js";
+import Profesional from "../models/profesional.js";
+import Turno from "../models/turno.js";
 
-// Apuntamos a la base de datos JSON
-const rutaDatabase = path.join(__dirname, "../data/turnos.json");
-const rutaPacientes = path.join(__dirname, "../data/pacientes.json");
-const rutaProfesionales = path.join(__dirname, "../data/profesionales.json");
-const rutaEspecialidades = path.join(__dirname, "../data/especialidades.json");
-
-
-//función para leer los turnos desde el archivo database.json
-function leerTurnos() {
-  const Data = fs.readFileSync(rutaDatabase, "utf-8"); // Leer el contenido del archivo database.json
-  return JSON.parse(Data)
-}
-
-//funcion para guardar los turnos en el archivo database.json
-function guardarTurnos(turnos) {
-  const Data = JSON.stringify(turnos, null, 2);
-  fs.writeFileSync(rutaDatabase, Data, "utf-8");
-}
-
-function leerJson(ruta) {
-  return JSON.parse(fs.readFileSync(ruta, "utf-8"));
-}
-
-// Función para normalizar texto eliminando acentos y convirtiendo a minúsculas
-function normalizarTexto(texto) {
-  return String(texto ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
+function idDeRuta(req, res) {
+  const id = req.params.id;
+  if (!mongoose.isObjectIdOrHexString(id)) {
+    res.status(400).json({ mensaje: "El ID del turno no es válido" });
+    return null;
+  }
+  return id;
 }
 
 function formatearFechaLocal(fecha) {
   const completar = valor => String(valor).padStart(2, "0");
-  return `${fecha.getFullYear()}-${completar(fecha.getMonth() + 1)}-${completar(fecha.getDate())}T${completar(fecha.getHours())}:${completar(fecha.getMinutes())}:00`;
+  return `${fecha.getFullYear()}-${completar(fecha.getMonth() + 1)}-${completar(fecha.getDate())}T${completar(fecha.getHours())}:${completar(fecha.getMinutes())}`;
 }
 
-function obtenerDatosTurno(req) {
-  const { nombrePaciente, apellidoPaciente, especialidad, fechaHora, fecha_hora_inicio } = req.body;
-  const pacientes = leerJson(rutaPacientes);
-  const profesionales = leerJson(rutaProfesionales);
-  const especialidades = leerJson(rutaEspecialidades);
-  const paciente = pacientes.find(item =>
-    normalizarTexto(item.nombre) === normalizarTexto(nombrePaciente) &&
-    normalizarTexto(item.apellido) === normalizarTexto(apellidoPaciente)
-  );
-  const especialidadEncontrada = especialidades.find(item =>
-    normalizarTexto(item.nombre_especialidad) === normalizarTexto(especialidad)
-  );
+function fechaParaFormulario(fecha) {
+  return formatearFechaLocal(new Date(fecha));
+}
 
+async function obtenerDatosTurno(body) {
+  const pacienteId = String(body.paciente ?? "").trim();
+  const especialidadId = String(body.especialidad ?? "").trim();
+  const fechaInicio = body.fecha_hora_inicio ?? body.fechaHora;
+
+  if (!pacienteId || !especialidadId || !fechaInicio) {
+    return { error: "Faltan datos requeridos para el turno" };
+  }
+  if (
+    !mongoose.isObjectIdOrHexString(pacienteId) ||
+    !mongoose.isObjectIdOrHexString(especialidadId)
+  ) {
+    return { error: "El paciente o la especialidad seleccionados no son válidos" };
+  }
+
+  const [paciente, especialidad] = await Promise.all([
+    Paciente.findById(pacienteId),
+    Especialidad.findById(especialidadId)
+  ]);
   if (!paciente) return { error: "Paciente no encontrado" };
-  if (!especialidadEncontrada) return { error: "Especialidad no encontrada" };
+  if (!especialidad) return { error: "Especialidad no encontrada" };
 
-  const profesional = profesionales.find(item => item.id_especialidad === especialidadEncontrada.id_especialidad);
-  if (!profesional) return { error: "No hay un profesional para esa especialidad" };
+  const profesional = await Profesional.findOne({
+    especialidad: especialidad._id
+  }).sort({ _id: 1 });
+  if (!profesional) {
+    return { error: "No hay un profesional para esa especialidad" };
+  }
 
-  const inicio = new Date(fecha_hora_inicio || fechaHora);
-  if (!Number.isFinite(inicio.getTime())) return { error: "La fecha y hora de inicio no son válidas" };
+  const inicio = new Date(fechaInicio);
+  if (!Number.isFinite(inicio.getTime())) {
+    return { error: "La fecha y hora de inicio no son válidas" };
+  }
 
-  const fin = new Date(inicio.getTime() + especialidadEncontrada.duracion_turno_default * 60 * 1000);
+  const fin = new Date(inicio.getTime() + especialidad.duracion_turno_default * 60_000);
   return {
     paciente,
     profesional,
-    especialidad: especialidadEncontrada,
-    fecha_hora_inicio: formatearFechaLocal(inicio),
-    fecha_hora_fin: formatearFechaLocal(fin)
+    especialidad,
+    fecha_hora_inicio: inicio,
+    fecha_hora_fin: fin
   };
 }
 
+function datosTurno(datos, estado = "Reservado") {
+  return {
+    paciente: datos.paciente._id,
+    profesional: datos.profesional._id,
+    especialidad: datos.especialidad._id,
+    fecha_hora_inicio: datos.fecha_hora_inicio,
+    fecha_hora_fin: datos.fecha_hora_fin,
+    estado
+  };
+}
 
-//GET -> obtener todos los turnos
-const obtenerTurnos = (req, res) => {
-  const turnos = leerTurnos();
+async function renderizarListaTurnos(res, opciones = {}) {
+  const [turnos, pacientes, especialidades] = await Promise.all([
+    Turno.find()
+      .populate("paciente", "nombre apellido")
+      .populate("profesional", "nombre apellido")
+      .populate("especialidad", "nombre_especialidad")
+      .sort({ fecha_hora_inicio: 1 }),
+    Paciente.find().sort({ apellido: 1, nombre: 1 }),
+    Especialidad.find().sort({ nombre_especialidad: 1 })
+  ]);
+  return res.render("listTurnos", {
+    turnos,
+    pacientes,
+    especialidades,
+    turno: null,
+    mostrarFormulario: false,
+    editando: false,
+    ...opciones
+  });
+}
+
+export async function obtenerTurnos(req, res) {
+  if (req.headers.accept?.includes("text/html")) {
+    return renderizarListaTurnos(res);
+  }
+  const turnos = await Turno.find().sort({ fecha_hora_inicio: 1 });
   res.json(turnos);
 }
 
+export async function obtenerTurnoPorId(req, res) {
+  const id = idDeRuta(req, res);
+  if (id === null) return;
 
-// GET -> obtener un turno por ID
-const obtenerTurnoPorId = (req, res) => {
-  const id = parseInt(req.params.id);
-  const turnos = leerTurnos();
-  const turnoEncontrado = turnos.find(t => t.id_turno === id);
-
-  if (!turnoEncontrado) {
+  const turno = await Turno.findById(id);
+  if (!turno) {
     return res.status(404).json({ mensaje: "Turno no encontrado" });
   }
-  res.status(200).json(turnoEncontrado); //no hace falta el status(200) porque viene por default, pero lo dejo para que quede más claro que es un GET exitoso
-};
+  res.json(turno);
+}
 
-
-// POST -> agregar un nuevo turno
-const agregarTurno = (req, res) => {
-  const turnos = leerTurnos();
-  const datos = obtenerDatosTurno(req);
-
-  if (datos.error) {
+export async function agregarTurno(req, res) {
+  const datos = await obtenerDatosTurno(req.body);
+  if ("error" in datos) {
     return res.status(400).json({ mensaje: datos.error });
   }
 
-  const siguienteId = turnos.reduce((mayor, turno) => Math.max(mayor, Number(turno.id_turno) || 0), 0) + 1;
-  const nuevoTurno = {
-    id_turno: siguienteId,
-    id_paciente: datos.paciente.id_paciente,
-    id_profesional: datos.profesional.id_profesional,
-    nombrePaciente: datos.paciente.nombre,
-    apellidoPaciente: datos.paciente.apellido,
-    especialidad: datos.especialidad.nombre_especialidad,
-    fecha_hora_inicio: datos.fecha_hora_inicio,
-    fecha_hora_fin: datos.fecha_hora_fin,
-    estado: "Reservado"
-  };
+  const turno = await Turno.create(datosTurno(datos));
+  if (req.headers.accept?.includes("text/html")) {
+    return res.redirect("/turnos");
+  }
+  res.status(201).json({ mensaje: "Turno agregado con éxito", turno });
+}
 
-  turnos.push(nuevoTurno);
-  guardarTurnos(turnos);
-  res.status(201).json({
-    mensaje: "Turno agregado con éxito",
-    turno: nuevoTurno
+export async function actualizarTurno(req, res) {
+  const id = idDeRuta(req, res);
+  if (id === null) return;
+
+  const turnoExistente = await Turno.findById(id);
+  if (!turnoExistente) {
+    return res.status(404).json({ mensaje: "Turno no encontrado" });
+  }
+
+  const datos = await obtenerDatosTurno(req.body);
+  if ("error" in datos) {
+    return res.status(400).json({ mensaje: datos.error });
+  }
+
+  const turno = await Turno.findByIdAndUpdate(
+    id,
+    { $set: datosTurno(datos, turnoExistente.estado) },
+    { new: true, runValidators: true }
+  );
+
+  if (req.method === "POST" || req.headers.accept?.includes("text/html")) {
+    return res.redirect("/turnos");
+  }
+  res.json({ mensaje: "Turno actualizado con éxito", turno });
+}
+
+export async function mostrarFormularioNuevo(_req, res) {
+  return renderizarListaTurnos(res, { mostrarFormulario: true });
+}
+
+export async function mostrarFormularioEdicion(req, res) {
+  const id = idDeRuta(req, res);
+  if (id === null) return;
+
+  const turno = await Turno.findById(id)
+    .populate("paciente")
+    .populate("profesional")
+    .populate("especialidad");
+  if (!turno) {
+    return res.status(404).send("Turno no encontrado");
+  }
+  if (!turno.paciente || !turno.profesional || !turno.especialidad) {
+    return res.status(409).send("El turno referencia un documento inexistente");
+  }
+
+  const valoresTurno = turno.toObject();
+  valoresTurno.fecha_hora_inicio = fechaParaFormulario(turno.fecha_hora_inicio);
+  valoresTurno.pacienteId = turno.paciente._id.toString();
+  valoresTurno.especialidadId = turno.especialidad._id.toString();
+  return renderizarListaTurnos(res, {
+    turno: valoresTurno,
+    mostrarFormulario: true,
+    editando: true
   });
 }
 
-// PUT -> actualizar un turno existente
-const actualizarTurno = (req, res) => {
-  const id = parseInt(req.params.id);
-  const turnos = leerTurnos();
-  const turnoIndex = turnos.findIndex(t => t.id_turno === id);
+export async function eliminarTurno(req, res) {
+  const id = idDeRuta(req, res);
+  if (id === null) return;
 
-  // Verificamos si el turno existe
-  if (turnoIndex === -1) {
+  const turno = await Turno.findByIdAndDelete(id);
+  if (!turno) {
     return res.status(404).json({ mensaje: "Turno no encontrado" });
   }
 
-  // Obtenemos los datos del turno desde la solicitud
-  const datos = obtenerDatosTurno(req);
-  if (datos.error) {
-    return res.status(400).json({ mensaje: datos.error });
+  if (req.method === "POST" || req.headers.accept?.includes("text/html")) {
+    return res.redirect("/turnos");
   }
-
-  // Actualizamos los datos del turno existente con los nuevos datos proporcionados
-  turnos[turnoIndex] = {
-    ...turnos[turnoIndex],
-    id_paciente: datos.paciente.id_paciente,
-    id_profesional: datos.profesional.id_profesional,
-    nombrePaciente: datos.paciente.nombre,
-    apellidoPaciente: datos.paciente.apellido,
-    especialidad: datos.especialidad.nombre_especialidad,
-    fecha_hora_inicio: datos.fecha_hora_inicio,
-    fecha_hora_fin: datos.fecha_hora_fin
-  };
-
-  guardarTurnos(turnos);
-  if (req.method === "POST") {
-    return res.redirect("/");
-  }
-
-  res.status(200).json({
-    mensaje: "Turno actualizado con éxito",
-    turno: turnos[turnoIndex]
-  }); // Devuelve un mensaje de éxito (denuevo no hace falta el status(200)) y el turno actualizado
-};
-
-
-// GET -> mostrar el formulario de edición de un turno
-const mostrarFormularioNuevo = (req, res) => {
-  res.render("formTurnos", {
-    title: "Nuevo Turno",
-    message: "Complete el formulario para crear un nuevo turno.",
-    turno: null,
-    editando: false,
-    especialidades: leerJson(rutaEspecialidades)
-  });
-};
-
-const mostrarFormularioEdicion = (req, res) => {
-  const id = parseInt(req.params.id);
-  const turno = leerTurnos().find(item => item.id_turno === id);
-  if (!turno) return res.status(404).send("Turno no encontrado");
-
-  res.render("formTurnos", {
-    title: "Editar Turno",
-    message: "Modifique los datos del turno.",
-    turno,
-    editando: true,
-    especialidades: leerJson(rutaEspecialidades)
-  });
-};
-
-// DELETE -> eliminar un turno existente
-const eliminarTurno = (req, res) => {
-  const id = parseInt(req.params.id);
-  const turnos = leerTurnos();
-  const turnoIndex = turnos.findIndex(t => t.id_turno === id);
-
-  // Verificamos si el turno existe
-  if (turnoIndex === -1) {
-    return res.status(404).json({ mensaje: "Turno no encontrado" });
-  }
-
-  // Eliminamos el turno de la lista
-  turnos.splice(turnoIndex, 1);
-  guardarTurnos(turnos);
-
-  // Si la solicitud es un POST, redirigimos a la página principal
-  if (req.method === "POST") {
-    return res.redirect("/");
-  }
-
   res.json({ mensaje: "Turno eliminado con éxito" });
 }
-
-// Exportamos las funciones para que puedan ser utilizadas en otros archivos
-module.exports = {
-  leerTurnos,
-  mostrarFormularioNuevo,
-  mostrarFormularioEdicion,
-  obtenerTurnos,
-  obtenerTurnoPorId,
-  agregarTurno,
-  actualizarTurno,
-  eliminarTurno
-};

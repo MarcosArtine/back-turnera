@@ -1,0 +1,16 @@
+block content
+  h2 Iniciar Sesión
+  form(method="POST", action="/login")
+    div
+      label(for="email") Correo Electrónico:
+      input(type="email", name="email", id="email", required)
+    div
+      label(for="password") Contraseña:
+      input(type="password", name="password", id="password", required)
+    div
+      button(type="submit", id="loginButton") Iniciar Sesión
+
+  p
+    a(href="/register") ¿No tienes una cuenta? Regístrate aquí.
+
+script(src="/scripts/script.js")

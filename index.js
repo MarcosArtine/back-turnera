@@ -1,37 +1,46 @@
-//en el package.json agregamos "start": "node --watch index.js" para que se reinicie el servidor cada vez que hagamos un cambio en el código
+import express from "express";
+import "dotenv/config";
+import mongoose from "mongoose";
+import { conectarDB } from "./config/db.js";
+import especialidadesRoutes from "./routes/especialidadesRoutes.js";
+import pacientesRoutes from "./routes/pacientesRoutes.js";
+import profesionalesRoutes from "./routes/profesionalesRoutes.js";
+import turnosRoutes from "./routes/turnosRoutes.js";
 
-const express = require("express");
 const app = express();
-const PORT = process.env.PORT ?? 3000; //Si no pasamos un puerto por entorno, se usa el 3000
-
-const { leerTurnos } = require("./controllers/turnosControllers"); // Importar los controladores de turnos
-
-const turnosRoutes = require("./routes/turnosRoutes"); // Importar las rutas de turnos
-const pacientesRoutes = require("./routes/pacientesRoutes");
-const profesionalesRoutes = require("./routes/profesionalesRoutes");
+const PORT = process.env.PORT ?? 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuración de Pug como motor de plantillas
-app.set("view engine", "pug"); // Establecer Pug como motor de vistas
-app.set("views", "./views"); // Establecer la carpeta de vistas
+app.use(express.static("public"));
 
-// Ruta de inicio que renderiza la vista index.pug
-app.get("/", (req, res) => {
-  const turnos = leerTurnos();
-  res.render("index", {  // Renderizar la vista index.pug
-    title: "Bienvenido a la API de Turnos",
-    message: "Esta es la página de inicio de la API de Turnos.",
-    turnos: turnos
-  });
-});
+app.set("view engine", "pug");
+app.set("views", "./views");
 
-app.use("/turnos", turnosRoutes); // Usar las rutas de turnos en la ruta /turnos
+app.get("/", (_req, res) => res.redirect("/turnos"));
+
+
+// Rutas a los endpoints principales de la API
+app.use("/turnos", turnosRoutes);
 app.use("/pacientes", pacientesRoutes);
 app.use("/profesionales", profesionalesRoutes);
+app.use("/especialidades", especialidadesRoutes);
 
-// Iniciar el servidor
+app.use((error, _req, res, _next) => {
+  if (error instanceof mongoose.Error.ValidationError || error instanceof mongoose.Error.CastError) {
+    return res.status(400).json({ mensaje: error.message });
+  }
+  if (error.code === 11000) {
+    return res.status(409).json({ mensaje: "Ya existe un registro con esos datos" });
+  }
+
+  console.error("Error no controlado en una solicitud:", error);
+  res.status(500).json({ mensaje: "Error interno del servidor" });
+});
+
+await conectarDB();
+
 app.listen(PORT, () => {
-  console.log("Servidor de node escuchando en http://localhost:" + PORT);
+  console.log(`Servidor de node escuchando en http://localhost:${PORT}`);
 });

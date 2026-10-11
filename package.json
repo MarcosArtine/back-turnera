@@ -4,14 +4,16 @@
   "description": "",
   "license": "ISC",
   "author": "Marcos Artine, Anahi Cardozo, Marisol Alcaraz, Nancy Vargas, Ezequiel Cattalín",
-  "type": "commonjs",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "start": "node --watch index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "dotenv": "^18.0.5",
     "express": "^5.2.1",
+    "mongoose": "^9.10.4",
     "pug": "^3.0.4"
   }
 }

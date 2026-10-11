@@ -3,6 +3,7 @@ html(lang='es')
   head
     meta(charset='UTF-8')
     meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    link(rel='stylesheet', href='/styles/style.css')
     title CRUD de Turnos
 
   body
@@ -10,9 +11,10 @@ html(lang='es')
       h1 CRUD de Turnos
       nav
         ul
-          li: a(href='/') Lista de Turnos
+          li: a(href='/turnos') Lista de Turnos
           li: a(href='/pacientes') Lista de Pacientes
           li: a(href='/profesionales') Lista de Profesionales
+          li: a(href='/especialidades') Lista de Especialidades
 
     hr
 
@@ -21,4 +23,6 @@ html(lang='es')
     hr
 
     footer
-      p &copy; 2026 CRUD de Turnos. Grupo 12.
+      p &copy; 2026 CRUD de turnos medicos. Grupo 12.
+
+script(src="/scripts/script.js")

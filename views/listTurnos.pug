@@ -1,0 +1,56 @@
+extends layout 
+block content
+  h2 Lista de Turnos
+  if mostrarFormulario
+    h3= editando ? 'Editar Turno' : 'Nuevo Turno'
+    form(method="POST", action=editando ? `/turnos/${turno._id}/editar` : "/turnos")
+      div
+        label(for="paciente") Paciente:
+        select(id="paciente", name="paciente", required)
+          option(value="") Seleccione un paciente
+          each paciente in pacientes
+            option(value=paciente._id, selected=turno && turno.pacienteId === paciente._id.toString())= `${paciente.apellido}, ${paciente.nombre}`
+      div
+        label(for="fechaHora") Fecha y Hora:
+        input(type="datetime-local", id="fechaHora", name="fechaHora", value=turno ? turno.fecha_hora_inicio.slice(0, 16) : '', required)
+      div
+        label(for="especialidad") Especialidad:
+        select(id="especialidad", name="especialidad", required)
+          option(value="") Seleccione una especialidad
+          each especialidad in especialidades
+            option(value=especialidad._id, selected=turno && turno.especialidadId === especialidad._id.toString())= especialidad.nombre_especialidad
+      button(type="submit")= editando ? 'Actualizar Turno' : 'Guardar Turno'
+      a(href="/turnos") Cancelar
+  else
+    form(method="GET", action="/turnos/nuevo")
+      button(type="submit") Nuevo Turno
+  if turnos.length > 0
+    table
+      thead
+        tr
+          th _id
+          th Nombre del Paciente
+          th Apellido del Paciente
+          th Profesional
+          th Fecha y Hora
+          th Especialidad
+          th Estado
+          th Acciones
+      tbody
+        each turno in turnos
+          tr
+            td= turno._id
+            td= turno.paciente ? turno.paciente.nombre : 'Paciente eliminado'
+            td= turno.paciente ? turno.paciente.apellido : ''
+            td= turno.profesional ? `${turno.profesional.nombre} ${turno.profesional.apellido}` : 'Profesional eliminado'
+            td= new Date(turno.fecha_hora_inicio).toLocaleString()
+            td= turno.especialidad ? turno.especialidad.nombre_especialidad : 'Especialidad eliminada'
+            td= turno.estado
+            td
+              form(method="GET", action=`/turnos/${turno._id}/editar`, style="display:inline")
+                button(type="submit") Editar
+              |  |
+              form(method="POST", action=`/turnos/${turno._id}/eliminar`, style="display:inline")
+                button(type="submit", onclick="return confirm('¿Está seguro de eliminar este turno?')") Eliminar
+  else
+    p No hay turnos disponibles.

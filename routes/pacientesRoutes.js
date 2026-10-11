@@ -1,8 +1,8 @@
-const express = require("express");
+import express from "express";
 
 const router = express.Router();
 
-const {
+import {
   obtenerPacientes,
   mostrarFormularioNuevo,
   obtenerPacientePorId,
@@ -10,7 +10,7 @@ const {
   eliminarPaciente,
   editarPaciente,
   mostrarFormularioEdicion
-} = require("../controllers/pacientesControllers");
+} from "../controllers/pacientesControllers.js";
 
 // Rutas de pacientes
 router.get("/", obtenerPacientes);
@@ -23,4 +23,4 @@ router.post("/:id/editar", editarPaciente);
 router.delete("/:id/eliminar", eliminarPaciente);
 router.post("/:id/eliminar", eliminarPaciente);
 
-module.exports = router;
+export default router;

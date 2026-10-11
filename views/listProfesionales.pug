@@ -1,14 +1,40 @@
-extends layout 
-
+extends layout
 block content
   h2 Lista de Profesionales
-  form(method="GET", action="/profesionales/nuevo")
-    button(type="submit") Nuevo Profesional
+  if mostrarFormulario
+    h3= editando ? 'Editar Profesional' : 'Nuevo Profesional'
+    form(method="POST", action=editando ? `/profesionales/${profesional._id}/editar` : "/profesionales")
+      div
+        label(for="nombre") Nombre:
+        input(type="text", id="nombre", name="nombre", value=profesional ? profesional.nombre : '', required)
+      div
+        label(for="apellido") Apellido:
+        input(type="text", id="apellido", name="apellido", value=profesional ? profesional.apellido : '', required)
+      div
+        label(for="matricula_profesional") Matrícula profesional:
+        input(type="text", id="matricula_profesional", name="matricula_profesional", value=profesional ? profesional.matricula_profesional : '', required)
+      div
+        label(for="especialidad") Especialidad:
+        select(id="especialidad", name="especialidad", required)
+          option(value="") Seleccione una especialidad
+          each especialidad in especialidades
+            option(value=especialidad._id, selected=profesional && profesional.especialidadId === especialidad._id.toString())= especialidad.nombre_especialidad
+      div
+        label(for="telefono") Teléfono:
+        input(type="text", id="telefono", name="telefono", value=profesional ? profesional.telefono : '', required)
+      div
+        label(for="correo_electronico") Email:
+        input(type="email", id="correo_electronico", name="correo_electronico", value=profesional ? profesional.correo_electronico : '', required)
+      button(type="submit")= editando ? 'Actualizar Profesional' : 'Agregar Profesional'
+      a(href="/profesionales") Cancelar
+  else
+    form(method="GET", action="/profesionales/nuevo")
+      button(type="submit") Nuevo Profesional
   if profesionales.length > 0
     table
       thead
         tr
-          th ID
+          th _id
           th Nombre
           th Apellido
           th Especialidad
@@ -18,17 +44,17 @@ block content
       tbody
         each profesional in profesionales
           tr
-            td= profesional.id_profesional
+            td= profesional._id
             td= profesional.nombre
             td= profesional.apellido
-            td= profesional.id_especialidad
+            td= profesional.especialidad ? profesional.especialidad.nombre_especialidad : 'Sin especialidad'
             td= profesional.telefono
             td= profesional.correo_electronico
             td
-              form(method="GET", action=`/profesionales/${profesional.id_profesional}/editar`, style="display:inline")
+              form(method="GET", action=`/profesionales/${profesional._id}/editar`, style="display:inline")
                 button(type="submit") Editar
               |  |
-              form(method="POST", action=`/profesionales/${profesional.id_profesional}/eliminar`, style="display:inline")
+              form(method="POST", action=`/profesionales/${profesional._id}/eliminar`, style="display:inline")
                 button(type="submit", onclick="return confirm('¿Está seguro de eliminar este profesional?')") Eliminar
   else
     p No hay profesionales disponibles.

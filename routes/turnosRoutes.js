@@ -1,8 +1,8 @@
-const express = require("express");
+import express from "express";
 
 const router = express.Router();
 
-const {
+import {
   obtenerTurnos,
   mostrarFormularioNuevo,
   obtenerTurnoPorId,
@@ -10,10 +10,10 @@ const {
   actualizarTurno,
   eliminarTurno,
   mostrarFormularioEdicion
-} = require("../controllers/turnosControllers");
+} from "../controllers/turnosControllers.js";
 
 
-// rutas CRUD
+// rutas CRUD para turnos
 router.get("/", obtenerTurnos);
 router.get("/nuevo", mostrarFormularioNuevo);
 router.get("/:id/editar", mostrarFormularioEdicion);
@@ -25,4 +25,4 @@ router.delete("/:id/eliminar", eliminarTurno);
 
 router.post("/:id/eliminar", eliminarTurno); // Ruta para redirigimos a la página principal cuando se elimina un turno desde la vista
 
-module.exports = router;
+export default router;

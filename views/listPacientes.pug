@@ -1,14 +1,37 @@
-extends layout 
-
+extends layout
 block content
   h2 Lista de Pacientes
-  form(method="GET", action="/pacientes/nuevo")
-    button(type="submit") Nuevo Paciente
+  if mostrarFormulario
+    h3= editando ? 'Editar Paciente' : 'Nuevo Paciente'
+    form(method="POST", action=editando ? `/pacientes/${paciente._id}/editar` : "/pacientes")
+      div
+        label(for="nombre") Nombre:
+        input(type="text", id="nombre", name="nombre", value=paciente ? paciente.nombre : '', required)
+      div
+        label(for="apellido") Apellido:
+        input(type="text", id="apellido", name="apellido", value=paciente ? paciente.apellido : '', required)
+      div
+        label(for="dni") DNI:
+        input(type="text", id="dni", name="dni", value=paciente ? paciente.dni : '', required)
+      div
+        label(for="fecha_nacimiento") Fecha de Nacimiento:
+        input(type="date", id="fecha_nacimiento", name="fecha_nacimiento", value=paciente ? paciente.fecha_nacimiento : '', required)
+      div
+        label(for="telefono") Teléfono:
+        input(type="text", id="telefono", name="telefono", value=paciente ? paciente.telefono : '', required)
+      div
+        label(for="email") Email:
+        input(type="email", id="email", name="email", value=paciente ? paciente.email : '', required)
+      button(type="submit")= editando ? 'Guardar cambios' : 'Agregar paciente'
+      a(href="/pacientes") Cancelar
+  else
+    form(method="GET", action="/pacientes/nuevo")
+      button(type="submit") Nuevo Paciente
   if pacientes.length > 0
     table
       thead
         tr
-          th ID
+          th _id
           th Nombre
           th Apellido
           th DNI 
@@ -19,7 +42,7 @@ block content
       tbody
         each paciente in pacientes
           tr
-            td= paciente.id_paciente
+            td= paciente._id
             td= paciente.nombre
             td= paciente.apellido
             td= paciente.dni
@@ -27,10 +50,10 @@ block content
             td= paciente.telefono
             td= paciente.email
             td
-              form(method="GET", action=`/pacientes/${paciente.id_paciente}/editar`, style="display:inline")
+              form(method="GET", action=`/pacientes/${paciente._id}/editar`, style="display:inline")
                 button(type="submit") Editar
               |  |
-              form(method="POST", action=`/pacientes/${paciente.id_paciente}/eliminar`, style="display:inline")
+              form(method="POST", action=`/pacientes/${paciente._id}/eliminar`, style="display:inline")
                 button(type="submit", onclick="return confirm('¿Está seguro de eliminar este paciente?')") Eliminar
   else
     p No hay pacientes disponibles.

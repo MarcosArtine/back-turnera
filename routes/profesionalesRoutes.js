@@ -1,8 +1,8 @@
-const express = require("express");
+import express from "express";
 
 const router = express.Router();
 
-const {
+import {
   obtenerProfesionales,
   mostrarFormularioNuevo,
   obtenerProfesionalPorId,
@@ -10,7 +10,7 @@ const {
   actualizarProfesional,
   eliminarProfesional,
   mostrarFormularioEdicion
-} = require("../controllers/profesionalesControllers");
+} from "../controllers/profesionalesControllers.js";
 
 router.get("/", obtenerProfesionales);
 router.get("/nuevo", mostrarFormularioNuevo);
@@ -22,4 +22,4 @@ router.post("/:id/editar", actualizarProfesional);
 router.delete("/:id/eliminar", eliminarProfesional);
 router.post("/:id/eliminar", eliminarProfesional);
 
-module.exports = router;
+export default router;

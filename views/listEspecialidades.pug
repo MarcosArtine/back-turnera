@@ -1,0 +1,45 @@
+extend layout
+block content
+  h2 Lista de Especialidades
+  if mostrarFormulario
+    h3= editando ? 'Editar Especialidad' : 'Nueva Especialidad'
+    form(method="POST", action=editando ? `/especialidades/${especialidad._id}/editar` : "/especialidades")
+      div
+        label(for="nombre_especialidad") Nombre:
+        input(type="text", id="nombre_especialidad", name="nombre_especialidad", value=especialidad ? especialidad.nombre_especialidad : '', required)
+      div
+        label(for="descripcion") Descripción:
+        input(type="text", id="descripcion", name="descripcion", value=especialidad ? especialidad.descripcion : '', required)
+      div
+        label(for="duracion_turno_default") Duración (en minutos):
+        input(type="number", id="duracion_turno_default", name="duracion_turno_default", value=especialidad ? especialidad.duracion_turno_default : '', min="1", required)
+      div
+        button(type="submit")= editando ? 'Guardar cambios' : 'Agregar especialidad'
+      a(href="/especialidades") Cancelar
+  else
+    form(method="GET", action="/especialidades/nuevo")
+      button(type="submit") Nueva Especialidad
+  if especialidades.length > 0
+    table
+      thead
+        tr
+          th _id
+          th Nombre
+          th Descripción
+          th Duración
+          th Acciones
+      tbody
+        each especialidad in especialidades
+          tr
+            td= especialidad._id
+            td= especialidad.nombre_especialidad
+            td= especialidad.descripcion
+            td= especialidad.duracion_turno_default
+            td
+              form(method="GET", action=`/especialidades/${especialidad._id}/editar`, style="display:inline")
+                button(type="submit") Editar
+              |  |
+              form(method="POST", action=`/especialidades/${especialidad._id}/eliminar`, style="display:inline")
+                button(type="submit", onclick="return confirm('¿Está seguro de eliminar esta especialidad?')") Eliminar
+  else
+    p No hay especialidades disponibles.

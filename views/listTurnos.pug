@@ -3,7 +3,7 @@ block content
   h2 Lista de Turnos
   if mostrarFormulario
     h3= editando ? 'Editar Turno' : 'Nuevo Turno'
-    form(method="POST", action=editando ? `/turnos/${turno._id}/editar` : "/turnos")
+    form(method="POST", action=editando ? `/turnos/${turno._id}/editar` : "/turnos", data-fetch-method=editando ? "PUT" : null)
       div
         label(for="paciente") Paciente:
         select(id="paciente", name="paciente", required)
@@ -21,7 +21,7 @@ block content
             option(value=especialidad._id, selected=turno && turno.especialidadId === especialidad._id.toString())= especialidad.nombre_especialidad
       button(type="submit")= editando ? 'Actualizar Turno' : 'Guardar Turno'
       a(href="/turnos") Cancelar
-  else
+  else if !esProfesional
     form(method="GET", action="/turnos/nuevo")
       button(type="submit") Nuevo Turno
   if turnos.length > 0
@@ -35,7 +35,8 @@ block content
           th Fecha y Hora
           th Especialidad
           th Estado
-          th Acciones
+          if !esProfesional
+            th Acciones
       tbody
         each turno in turnos
           tr
@@ -46,11 +47,12 @@ block content
             td= new Date(turno.fecha_hora_inicio).toLocaleString()
             td= turno.especialidad ? turno.especialidad.nombre_especialidad : 'Especialidad eliminada'
             td= turno.estado
-            td
-              form(method="GET", action=`/turnos/${turno._id}/editar`, style="display:inline")
-                button(type="submit") Editar
-              |  |
-              form(method="POST", action=`/turnos/${turno._id}/eliminar`, style="display:inline")
-                button(type="submit", onclick="return confirm('¿Está seguro de eliminar este turno?')") Eliminar
+            if !esProfesional
+              td
+                form(method="GET", action=`/turnos/${turno._id}/editar`, style="display:inline")
+                  button(type="submit") Editar
+                |  |
+                form(method="POST", action=`/turnos/${turno._id}/eliminar`, data-fetch-method="DELETE", style="display:inline")
+                  button(type="submit", onclick="return confirm('¿Está seguro de eliminar este turno?')") Eliminar
   else
     p No hay turnos disponibles.

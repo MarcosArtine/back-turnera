@@ -2,10 +2,12 @@ import mongoose from "mongoose";
 import Paciente from "../models/paciente.js";
 import Turno from "../models/turno.js";
 
+// Detecta solicitudes de navegador para elegir entre vistas HTML y respuestas JSON.
 function solicitaHtml(req) {
   return req.headers.accept?.includes("text/html") ?? false;
 }
 
+// Comprueba el ObjectId de la URL antes de consultar MongoDB.
 function idDeRuta(req, res) {
   const id = req.params.id;
   if (!mongoose.isObjectIdOrHexString(id)) {
@@ -15,6 +17,7 @@ function idDeRuta(req, res) {
   return id;
 }
 
+// Extrae solo los campos permitidos para crear o modificar un paciente.
 function datosPaciente(body) {
   const campos = ["nombre", "apellido", "dni", "fecha_nacimiento", "telefono", "email"];
   return Object.fromEntries(
@@ -22,10 +25,12 @@ function datosPaciente(body) {
   );
 }
 
+// Formatea la fecha de nacimiento para el control HTML de tipo date.
 function fechaParaFormulario(fecha) {
   return fecha ? new Date(fecha).toISOString().slice(0, 10) : "";
 }
 
+// Obtiene todos los pacientes y responde con una vista o un arreglo JSON.
 export async function obtenerPacientes(req, res) {
   const pacientes = await Paciente.find().sort({ _id: 1 });
   if (solicitaHtml(req)) {
@@ -39,6 +44,7 @@ export async function obtenerPacientes(req, res) {
   res.json(pacientes);
 }
 
+// Muestra el formulario de alta junto al listado actual de pacientes.
 export async function mostrarFormularioNuevo(_req, res) {
   const pacientes = await Paciente.find().sort({ _id: 1 });
   res.render("listPacientes", {
@@ -49,6 +55,7 @@ export async function mostrarFormularioNuevo(_req, res) {
   });
 }
 
+// Busca un paciente por ID y devuelve un error si no existe.
 export async function obtenerPacientePorId(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -60,6 +67,7 @@ export async function obtenerPacientePorId(req, res) {
   res.json(paciente);
 }
 
+// Crea un paciente con los campos permitidos y adapta la respuesta al cliente.
 export async function agregarPaciente(req, res) {
   const paciente = await Paciente.create(datosPaciente(req.body));
 
@@ -69,6 +77,7 @@ export async function agregarPaciente(req, res) {
   res.status(201).json({ mensaje: "Paciente agregado con éxito", paciente });
 }
 
+// Carga los datos del paciente y prepara la fecha para editarla desde la vista.
 export async function mostrarFormularioEdicion(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -89,6 +98,7 @@ export async function mostrarFormularioEdicion(req, res) {
   });
 }
 
+// Aplica los cambios permitidos y responde con redirección web o el documento actualizado.
 export async function editarPaciente(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -108,6 +118,7 @@ export async function editarPaciente(req, res) {
   res.json({ mensaje: "Paciente actualizado con éxito", paciente });
 }
 
+// Impide eliminar pacientes asociados a turnos y borra solo registros sin referencias.
 export async function eliminarPaciente(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;

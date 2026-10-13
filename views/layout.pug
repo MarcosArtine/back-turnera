@@ -11,10 +11,14 @@ html(lang='es')
       h1 CRUD de Turnos
       nav
         ul
-          li: a(href='/turnos') Lista de Turnos
-          li: a(href='/pacientes') Lista de Pacientes
-          li: a(href='/profesionales') Lista de Profesionales
-          li: a(href='/especialidades') Lista de Especialidades
+          li: a(href='/turnos')= usuario && usuario.rol === 'profesional' ? 'Mis Turnos' : 'Lista de Turnos'
+          if usuario && usuario.rol === 'admin'
+            li: a(href='/pacientes') Lista de Pacientes
+            li: a(href='/profesionales') Lista de Profesionales
+            li: a(href='/especialidades') Lista de Especialidades
+          li
+            form(method="POST", action="/logout", data-fetch-form, data-success-redirect="/login")
+              button(type="submit") Cerrar sesión
 
     hr
 

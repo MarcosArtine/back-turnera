@@ -3,10 +3,12 @@ import Especialidad from "../models/especialidad.js";
 import Profesional from "../models/profesional.js";
 import Turno from "../models/turno.js";
 
+// Determina si la ruta debe responder con una página HTML o con JSON.
 function solicitaHtml(req) {
   return req.headers.accept?.includes("text/html") ?? false;
 }
 
+// Valida el identificador del profesional antes de acceder a la base.
 function idDeRuta(req, res) {
   const id = req.params.id;
   if (!mongoose.isObjectIdOrHexString(id)) {
@@ -16,6 +18,7 @@ function idDeRuta(req, res) {
   return id;
 }
 
+// Filtra los datos recibidos para que solo se persistan campos del perfil profesional.
 function datosProfesional(body) {
   const campos = [
     "nombre",
@@ -34,6 +37,7 @@ function datosProfesional(body) {
   return datos;
 }
 
+// Verifica el formato y existencia de la especialidad asociada.
 async function validarEspecialidad(idEspecialidad) {
   if (!mongoose.isObjectIdOrHexString(idEspecialidad)) {
     return false;
@@ -41,6 +45,7 @@ async function validarEspecialidad(idEspecialidad) {
   return Boolean(await Especialidad.exists({ _id: idEspecialidad }));
 }
 
+// Devuelve la lista de profesionales y, para el navegador, prepara el formulario de alta.
 export async function obtenerProfesionales(req, res) {
   const profesionales = await Profesional.find()
     .populate("especialidad", "nombre_especialidad")
@@ -58,6 +63,7 @@ export async function obtenerProfesionales(req, res) {
   res.json(profesionales);
 }
 
+// Carga los datos auxiliares y muestra vacío el formulario de creación.
 export async function mostrarFormularioNuevo(_req, res) {
   const [profesionales, especialidades] = await Promise.all([
     Profesional.find().populate("especialidad", "nombre_especialidad").sort({ _id: 1 }),
@@ -72,6 +78,7 @@ export async function mostrarFormularioNuevo(_req, res) {
   });
 }
 
+// Busca un profesional y completa su referencia a especialidad antes de responder.
 export async function obtenerProfesionalPorId(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -83,6 +90,7 @@ export async function obtenerProfesionalPorId(req, res) {
   res.json(profesional);
 }
 
+// Valida la especialidad y crea el perfil profesional.
 export async function agregarProfesional(req, res) {
   const datos = datosProfesional(req.body);
   if (!(await validarEspecialidad(datos.especialidad))) {
@@ -96,6 +104,7 @@ export async function agregarProfesional(req, res) {
   res.status(201).json({ mensaje: "Profesional agregado con éxito", profesional });
 }
 
+// Obtiene el perfil, el listado y las especialidades para completar la edición.
 export async function mostrarFormularioEdicion(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -124,6 +133,7 @@ export async function mostrarFormularioEdicion(req, res) {
   });
 }
 
+// Actualiza únicamente los campos permitidos y valida cualquier cambio de especialidad.
 export async function actualizarProfesional(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -151,6 +161,7 @@ export async function actualizarProfesional(req, res) {
   res.json({ mensaje: "Profesional actualizado con éxito", profesional });
 }
 
+// Evita borrar profesionales con turnos asociados y elimina los perfiles sin referencias.
 export async function eliminarProfesional(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;

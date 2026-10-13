@@ -3,7 +3,7 @@ block content
   h2 Lista de Profesionales
   if mostrarFormulario
     h3= editando ? 'Editar Profesional' : 'Nuevo Profesional'
-    form(method="POST", action=editando ? `/profesionales/${profesional._id}/editar` : "/profesionales")
+    form(method="POST", action=editando ? `/profesionales/${profesional._id}/editar` : "/profesionales", data-fetch-method=editando ? "PUT" : null)
       div
         label(for="nombre") Nombre:
         input(type="text", id="nombre", name="nombre", value=profesional ? profesional.nombre : '', required)
@@ -54,7 +54,7 @@ block content
               form(method="GET", action=`/profesionales/${profesional._id}/editar`, style="display:inline")
                 button(type="submit") Editar
               |  |
-              form(method="POST", action=`/profesionales/${profesional._id}/eliminar`, style="display:inline")
+              form(method="POST", action=`/profesionales/${profesional._id}/eliminar`, data-fetch-method="DELETE", style="display:inline")
                 button(type="submit", onclick="return confirm('¿Está seguro de eliminar este profesional?')") Eliminar
   else
     p No hay profesionales disponibles.

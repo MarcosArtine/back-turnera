@@ -3,7 +3,7 @@ block content
   h2 Lista de Especialidades
   if mostrarFormulario
     h3= editando ? 'Editar Especialidad' : 'Nueva Especialidad'
-    form(method="POST", action=editando ? `/especialidades/${especialidad._id}/editar` : "/especialidades")
+    form(method="POST", action=editando ? `/especialidades/${especialidad._id}/editar` : "/especialidades", data-fetch-method=editando ? "PUT" : null)
       div
         label(for="nombre_especialidad") Nombre:
         input(type="text", id="nombre_especialidad", name="nombre_especialidad", value=especialidad ? especialidad.nombre_especialidad : '', required)
@@ -39,7 +39,7 @@ block content
               form(method="GET", action=`/especialidades/${especialidad._id}/editar`, style="display:inline")
                 button(type="submit") Editar
               |  |
-              form(method="POST", action=`/especialidades/${especialidad._id}/eliminar`, style="display:inline")
+              form(method="POST", action=`/especialidades/${especialidad._id}/eliminar`, data-fetch-method="DELETE", style="display:inline")
                 button(type="submit", onclick="return confirm('¿Está seguro de eliminar esta especialidad?')") Eliminar
   else
     p No hay especialidades disponibles.

@@ -1,4 +1,5 @@
 import express from "express";
+import { requiereAdministrador } from "../middleware/autenticacion.js";
 
 const router = express.Router();
 
@@ -13,16 +14,16 @@ import {
 } from "../controllers/turnosControllers.js";
 
 
-// rutas CRUD para turnos
+// Expone consultas de turnos y protege con rol administrador las operaciones de escritura.
 router.get("/", obtenerTurnos);
-router.get("/nuevo", mostrarFormularioNuevo);
-router.get("/:id/editar", mostrarFormularioEdicion);
+router.get("/nuevo", requiereAdministrador, mostrarFormularioNuevo);
+router.get("/:id/editar", requiereAdministrador, mostrarFormularioEdicion);
 router.get("/:id", obtenerTurnoPorId);
-router.post("/", agregarTurno);
-router.put("/:id", actualizarTurno);
-router.post("/:id/editar", actualizarTurno); // Ruta para redirigir a la página principal cuando se edita un turno desde la vista
-router.delete("/:id/eliminar", eliminarTurno);
+router.post("/", requiereAdministrador, agregarTurno);
+router.put("/:id", requiereAdministrador, actualizarTurno);
+router.post("/:id/editar", requiereAdministrador, actualizarTurno); // Ruta para redirigir a la página principal cuando se edita un turno desde la vista
+router.delete("/:id/eliminar", requiereAdministrador, eliminarTurno);
 
-router.post("/:id/eliminar", eliminarTurno); // Ruta para redirigimos a la página principal cuando se elimina un turno desde la vista
+router.post("/:id/eliminar", requiereAdministrador, eliminarTurno); // Ruta para redirigimos a la página principal cuando se elimina un turno desde la vista
 
 export default router;

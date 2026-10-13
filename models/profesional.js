@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// Define el perfil profesional y su relación obligatoria con una especialidad.
 const profesionalSchema = new mongoose.Schema(
   {
     nombre: { type: String, required: true, trim: true },

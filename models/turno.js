@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// Define un turno y sus relaciones con paciente, profesional y especialidad.
 const turnoSchema = new mongoose.Schema(
   {
     paciente: {

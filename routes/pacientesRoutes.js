@@ -12,7 +12,7 @@ import {
   mostrarFormularioEdicion
 } from "../controllers/pacientesControllers.js";
 
-// Rutas de pacientes
+// Asocia las rutas CRUD de pacientes con sus controladores.
 router.get("/", obtenerPacientes);
 router.get("/nuevo", mostrarFormularioNuevo);
 router.get("/:id/editar", mostrarFormularioEdicion);

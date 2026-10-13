@@ -1,16 +1,23 @@
-block content
-  h2 Iniciar Sesión
-  form(method="POST", action="/login")
-    div
-      label(for="email") Correo Electrónico:
-      input(type="email", name="email", id="email", required)
-    div
-      label(for="password") Contraseña:
-      input(type="password", name="password", id="password", required)
-    div
-      button(type="submit", id="loginButton") Iniciar Sesión
+doctype html
+html(lang="es")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    link(rel="stylesheet", href="/styles/style.css")
+    title Iniciar sesión | TurnoFlex
+  body
+    main
+      h1 TurnoFlex
+      h2 Iniciar sesión
+      form(method="POST", action="/login", data-fetch-form, data-success-redirect="/turnos")
+        div
+          label(for="correo_electronico") Correo electrónico:
+          input(type="email", name="correo_electronico", id="correo_electronico", autocomplete="username", required)
+        div
+          label(for="contrasena") Contraseña:
+          input(type="password", name="contrasena", id="contrasena", autocomplete="current-password", required)
+        button(type="submit") Iniciar sesión
+      p#form-message(role="alert", aria-live="polite")
 
-  p
-    a(href="/register") ¿No tienes una cuenta? Regístrate aquí.
-
-script(src="/scripts/script.js")
+      a(href="/registro") ¿No tienes una cuenta? Regístrate
+    script(src="/scripts/script.js", defer)

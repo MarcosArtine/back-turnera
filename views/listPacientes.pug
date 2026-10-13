@@ -3,7 +3,7 @@ block content
   h2 Lista de Pacientes
   if mostrarFormulario
     h3= editando ? 'Editar Paciente' : 'Nuevo Paciente'
-    form(method="POST", action=editando ? `/pacientes/${paciente._id}/editar` : "/pacientes")
+    form(method="POST", action=editando ? `/pacientes/${paciente._id}/editar` : "/pacientes", data-fetch-method=editando ? "PUT" : null)
       div
         label(for="nombre") Nombre:
         input(type="text", id="nombre", name="nombre", value=paciente ? paciente.nombre : '', required)
@@ -53,7 +53,7 @@ block content
               form(method="GET", action=`/pacientes/${paciente._id}/editar`, style="display:inline")
                 button(type="submit") Editar
               |  |
-              form(method="POST", action=`/pacientes/${paciente._id}/eliminar`, style="display:inline")
+              form(method="POST", action=`/pacientes/${paciente._id}/eliminar`, data-fetch-method="DELETE", style="display:inline")
                 button(type="submit", onclick="return confirm('¿Está seguro de eliminar este paciente?')") Eliminar
   else
     p No hay pacientes disponibles.

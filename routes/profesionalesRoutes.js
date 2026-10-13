@@ -2,6 +2,7 @@ import express from "express";
 
 const router = express.Router();
 
+// Asocia las rutas CRUD de profesionales con las funciones que procesan cada solicitud.
 import {
   obtenerProfesionales,
   mostrarFormularioNuevo,

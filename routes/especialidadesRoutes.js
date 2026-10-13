@@ -12,7 +12,7 @@ import {
   eliminarEspecialidad
 } from "../controllers/especialidadesControllers.js";
 
-// Rutas de especialidades
+// Asocia las rutas CRUD de especialidades con sus controladores.
 router.get("/", obtenerEspecialidades);
 router.get("/nuevo", mostrarFormularioNuevo);
 router.get("/:id/editar", mostrarFormularioEditar);

@@ -39,23 +39,32 @@ back-turnera/
 ├── index.js
 ├── package.json
 ├── routes/
+│   ├── usuariosRoutes.js
 │   ├── pacientesRoutes.js
 │   ├── profesionalesRoutes.js
 │   ├── especialidadesRoutes.js
 │   └── turnosRoutes.js
 ├── controllers/
+│   ├── usuariosControllers.js
 │   ├── pacientesControllers.js
 │   ├── profesionalesControllers.js
 │   ├── especialidadesControllers.js
 │   └── turnosControllers.js
 ├── models/
+│   ├── usuario.js
 │   ├── paciente.js
 │   ├── profesional.js
 │   ├── especialidad.js
 │   └── turno.js
 ├── config/
 │   └── db.js
+├── middleware/
+│   └── autenticacion.js
+├── public/
+│   └── scripts/
+│       └── script.js
 └── views/
+    ├── login.pug
     ├── layout.pug
     ├── listPacientes.pug
     ├── listProfesionales.pug
@@ -89,7 +98,10 @@ Ejemplo de cuerpo JSON para crear un turno:
 npm install
 ```
 
-2. Configurar `MONGO_URI` en un archivo `.env`, tomando como ejemplo `.env.example`.
+2. Copiar `.env.example` a `.env` y configurar:
+   - `MONGO_URI` para la conexión a MongoDB.
+   - `SESSION_SECRET` con un valor aleatorio de al menos 32 caracteres.
+   - `ADMIN_EMAIL` y `ADMIN_PASSWORD` para el administrador inicial. La contraseña debe tener al menos 12 caracteres.
 
 3. Iniciar el servidor en modo desarrollo:
 ```bash
@@ -97,8 +109,11 @@ npm start
 ```
 
 El servidor quedará disponible en `http://localhost:3000` (configurable mediante la variable de entorno `PORT`).
-Antes de crear profesionales o turnos, crea al menos una especialidad desde `/especialidades`.
+Antes de registrar profesionales o crear turnos, crea al menos una especialidad desde `/especialidades`.
 Los registros que estén referenciados por turnos o profesionales no se pueden eliminar hasta quitar esas referencias.
+El administrador se crea automáticamente la primera vez que inicia la aplicación; su contraseña se almacena con hash. Los profesionales pueden registrarse desde `/registro` y acceder únicamente a sus propios turnos en modo de consulta. La gestión de turnos y el resto de las páginas y API requieren iniciar sesión como administrador. Las sesiones se guardan en MongoDB.
+
+Los formularios realizan sus solicitudes mediante `fetch` desde `public/scripts/script.js`. El registro público crea la ficha del profesional y su cuenta vinculada; requiere que exista previamente la especialidad elegida.
 
 ---
 
@@ -131,11 +146,15 @@ Los registros que estén referenciados por turnos o profesionales no se pueden e
 
 ### Turnos (`/turnos`)
 - `GET /` — Página de inicio con la lista de turnos en Pug.
-- `GET /turnos` — Lista de turnos en JSON; responde con Pug si se solicita HTML (`200 OK`)
-- `GET /:id` — Turno específico por ID (`200 OK` / `404 Not Found`)
-- `POST /` — Alta de turno con cálculo de horario (`201 Created` / `400 Bad Request`)
-- `PUT /:id` — Edición de turno (`200 OK` / `400 Bad Request` / `404 Not Found`)
-- `DELETE /:id/eliminar` — Cancelación/eliminación (`200 OK` / `404 Not Found`)
+- `GET /turnos` — Lista de turnos en JSON; responde con Pug si se solicita HTML (`200 OK`). Los profesionales solo reciben los suyos.
+- `GET /:id` — Turno específico por ID (`200 OK` / `404 Not Found`); los profesionales no pueden consultar turnos ajenos.
+- `POST /` — Alta de turno con cálculo de horario, solo administrador (`201 Created` / `400 Bad Request`)
+- `PUT /:id` — Edición de turno, solo administrador (`200 OK` / `400 Bad Request` / `404 Not Found`)
+- `DELETE /:id/eliminar` — Cancelación/eliminación, solo administrador (`200 OK` / `404 Not Found`)
+
+### Usuarios
+- `GET /registro` y `POST /registro` — Alta pública de un profesional con su ficha y cuenta.
+- `GET /login` y `POST /login` — Inicio de sesión para administradores y profesionales.
 ---
 
 ## Códigos de estado HTTP utilizados

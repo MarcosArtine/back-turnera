@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// Define los campos obligatorios de una especialidad y la duración estándar de sus turnos.
 const especialidadSchema = new mongoose.Schema(
   {
     nombre_especialidad: { type: String, required: true, trim: true },

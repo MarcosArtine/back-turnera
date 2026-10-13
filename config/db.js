@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// Abre la conexión principal con MongoDB usando la URI configurada en el entorno.
 export const conectarDB = async () => {
   try {
     if (!process.env.MONGO_URI) {

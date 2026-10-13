@@ -1,0 +1,47 @@
+doctype html
+html(lang="es")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    link(rel="stylesheet", href="/styles/style.css")
+    title Registro profesional | TurnoFlex
+  body
+    main
+      h1 TurnoFlex
+      h2 Registro de profesional
+      if especialidades.length
+        form(method="POST", action="/registro", data-fetch-form, data-success-redirect="/login")
+          div
+            label(for="nombre") Nombre:
+            input(type="text", name="nombre", id="nombre", autocomplete="given-name", required)
+          div
+            label(for="apellido") Apellido:
+            input(type="text", name="apellido", id="apellido", autocomplete="family-name", required)
+          div
+            label(for="matricula_profesional") Matrícula profesional:
+            input(type="text", name="matricula_profesional", id="matricula_profesional", required)
+          div
+            label(for="especialidad") Especialidad:
+            select(name="especialidad", id="especialidad", required)
+              option(value="") Seleccione una especialidad
+              each especialidad in especialidades
+                option(value=especialidad._id)= especialidad.nombre_especialidad
+          div
+            label(for="telefono") Teléfono:
+            input(type="tel", name="telefono", id="telefono", autocomplete="tel", required)
+          div
+            label(for="correo_electronico") Correo electrónico:
+            input(type="email", name="correo_electronico", id="correo_electronico", autocomplete="email", required)
+          div
+            label(for="contrasena") Contraseña (mínimo 8 caracteres):
+            input(type="password", name="contrasena", id="contrasena", autocomplete="new-password", minlength="8", required)
+          div
+            label(for="confirmar_contrasena") Confirmar contraseña:
+            input(type="password", name="confirmar_contrasena", id="confirmar_contrasena", autocomplete="new-password", minlength="8", required)
+          button(type="submit") Crear cuenta
+        p#form-message(role="alert", aria-live="polite")
+      else
+        p No hay especialidades disponibles para completar el registro. Contacta al administrador.
+      p
+        a(href="/login") ¿Ya tienes una cuenta? Inicia sesión
+    script(src="/scripts/script.js", defer)

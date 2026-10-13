@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// Define los datos personales y de contacto persistidos para cada paciente.
 const pacienteSchema = new mongoose.Schema(
   {
     nombre: { type: String, required: true, trim: true },

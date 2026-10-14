@@ -163,7 +163,7 @@ export async function agregarTurno(req, res) {
   if ("error" in datos) {
     return res.status(400).json({ mensaje: datos.error });
   }
-
+  // el estado inicial es "Reservado" y no se permite que el cliente lo cambie
   const turno = await Turno.create(datosTurno(datos));
   if (req.headers.accept?.includes("text/html")) {
     return res.redirect("/turnos");
@@ -212,7 +212,8 @@ export async function mostrarFormularioNuevo(req, res) {
 export async function mostrarFormularioEdicion(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
-
+  // El filtro por rol se aplica para que un profesional no pueda editar un turno
+  // ajeno aunque conozca su ID. Si no hay coincidencia, se responde 404.
   const turno = await Turno.findById(id)
     .populate("paciente")
     .populate("profesional")
@@ -223,7 +224,7 @@ export async function mostrarFormularioEdicion(req, res) {
   if (!turno.paciente || !turno.profesional || !turno.especialidad) {
     return res.status(409).send("El turno referencia un documento inexistente");
   }
-
+  // Convierte la fecha a un formato compatible con el formulario y los IDs a cadenas
   const valoresTurno = turno.toObject();
   valoresTurno.fecha_hora_inicio = fechaParaFormulario(turno.fecha_hora_inicio);
   valoresTurno.pacienteId = turno.paciente._id.toString();

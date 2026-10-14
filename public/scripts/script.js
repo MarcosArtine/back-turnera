@@ -57,7 +57,7 @@ document.addEventListener("submit", async event => {
       window.location.assign(successRedirect);
       return;
     }
-
+    // Si hay un área de estado, muestra el mensaje recibido o uno genérico.
     if (message) {
       message.textContent = result?.mensaje || "Cambios guardados correctamente";
       message.removeAttribute("role");

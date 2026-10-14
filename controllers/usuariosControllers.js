@@ -14,6 +14,7 @@ export async function inicializarAdministrador() {
   const correo = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const contrasena = process.env.ADMIN_PASSWORD;
 
+  // valida que el correo tenga formato de email y que la contraseña tenga al menos 12 caracteres
   if (
     !correo ||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo) ||
@@ -23,6 +24,7 @@ export async function inicializarAdministrador() {
     throw new Error("Configura un ADMIN_EMAIL válido y un ADMIN_PASSWORD de al menos 12 caracteres");
   }
 
+  // busca un usuario con ese correo y fuerza la carga del hash de contraseña
   const existente = await Usuario.findOne({ correo_electronico: correo }).select("+contrasena");
   if (existente) {
     if (existente.rol !== "admin") {
@@ -39,7 +41,7 @@ export async function inicializarAdministrador() {
     }
     return;
   }
-
+  // si no existe, crea un nuevo usuario administrador con la contraseña cifrada
   await Usuario.create({
     correo_electronico: correo,
     contrasena: await bcrypt.hash(contrasena, RONDAS_HASH),
@@ -85,7 +87,7 @@ export async function registrarProfesional(req, res, next) {
     const correo = String(cuerpo.correo_electronico ?? "").trim().toLowerCase();
     const contrasena = cuerpo.contrasena;
     const confirmarContrasena = cuerpo.confirmar_contrasena;
-
+    // valida que los campos requeridos estén presentes y tengan formato correcto
     if (
       !nombre ||
       !apellido ||
@@ -106,7 +108,7 @@ export async function registrarProfesional(req, res, next) {
     if (contrasena !== confirmarContrasena) {
       return res.status(400).json({ mensaje: "Las contraseñas no coinciden" });
     }
-
+    // busca la especialidad y comprueba que el correo no esté usado por otra cuenta ni por otro profesional
     const [especialidad, usuarioExistente, profesionalExistente] = await Promise.all([
       Especialidad.findById(especialidadId),
       Usuario.exists({ correo_electronico: correo }),
@@ -150,7 +152,7 @@ export async function registrarProfesional(req, res, next) {
       }
       throw error;
     }
-
+    // Si la solicitud espera HTML, redirige al login; si espera JSON, devuelve un mensaje y la ruta de redirección.
     if (req.headers.accept?.includes("text/html")) {
       return res.redirect("/login");
     }
@@ -182,7 +184,7 @@ export async function iniciarSesion(req, res, next) {
     ) {
       return res.status(400).json({ mensaje: "Ingresa correo y contraseña" });
     }
-
+    // busca el usuario por correo, fuerza la carga del hash de contraseña y la referencia profesional
     const usuario = await Usuario.findOne({ correo_electronico: correo })
       .select("+contrasena")
       .populate("profesional");

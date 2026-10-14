@@ -12,18 +12,24 @@ import profesionalesRoutes from "./routes/profesionalesRoutes.js";
 import turnosRoutes from "./routes/turnosRoutes.js";
 import usuariosRoutes from "./routes/usuariosRoutes.js";
 
-// Crea la aplicación Express y define el puerto configurable del servidor.
+// Crea la instancia principal de Express. El puerto puede venir del entorno
+// (por ejemplo, en producción) y usa 3000 como valor local predeterminado.
 const app = express();
 const PORT = process.env.PORT ?? 3000;
 
-// Habilita el procesamiento de formularios y JSON, los archivos públicos y las vistas Pug.
+// Registra middleware de entrada y presentación antes de declarar las rutas:
+// así cada controlador puede recibir cuerpos JSON o formularios ya interpretados,
+// y Express puede servir recursos estáticos y renderizar vistas Pug.
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 app.set("view engine", "pug");
 app.set("views", "./views");
 
-// Evita iniciar la aplicación si faltan los secretos o la conexión obligatoria a MongoDB.
+// La clave de sesión debe tener suficiente longitud para proteger las cookies
+// firmadas. La URI de MongoDB también es obligatoria porque se usa tanto para
+// la aplicación como para almacenar las sesiones; fallar aquí evita arrancar
+// con una configuración incompleta.
 if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
   throw new Error("Configura SESSION_SECRET con al menos 32 caracteres en .env");
 }
@@ -31,7 +37,10 @@ if (!process.env.MONGO_URI) {
   throw new Error("Falta configurar MONGO_URI en .env");
 }
 
-// Persiste sesiones en MongoDB y aplica opciones de seguridad y expiración a la cookie.
+// Configura sesiones persistentes en MongoDB. La sesión se guarda en una
+// colección separada y vence tras ocho horas; `rolling` renueva ese plazo con
+// cada solicitud. `resave` y `saveUninitialized` evitan escrituras innecesarias
+// y no crean sesiones para visitantes que todavía no tienen datos de sesión.
 app.use(session({
   name: "turnoflex.sid",
   secret: process.env.SESSION_SECRET,
@@ -44,6 +53,9 @@ app.use(session({
   saveUninitialized: false,
   rolling: true,
   cookie: {
+    // El navegador no permite leer la cookie desde JavaScript; `sameSite`
+    // restringe su envío en solicitudes de otros sitios y `secure` exige HTTPS
+    // en producción. En desarrollo permite probar por HTTP local.
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
@@ -51,11 +63,15 @@ app.use(session({
   }
 }));
 
-// Las rutas de sesión y registro son públicas; el resto requiere una sesión válida.
+// Las rutas de usuarios se montan antes de exigir autenticación para permitir
+// iniciar sesión y registrarse. A partir de este punto, el middleware detiene
+// solicitudes sin una sesión válida antes de que lleguen a las rutas protegidas.
 app.use(usuariosRoutes);
 app.use(requiereAutenticacion);
 
-// Los profesionales acceden a sus turnos; las demás secciones se reservan al administrador.
+// La raíz lleva al listado de turnos. Ese recurso está disponible para
+// profesionales autenticados; el middleware de administrador se registra
+// después y protege únicamente las secciones administrativas siguientes.
 app.get("/", (_req, res) => res.redirect("/turnos"));
 app.use("/turnos", turnosRoutes);
 app.use(requiereAdministrador);
@@ -63,7 +79,11 @@ app.use("/pacientes", pacientesRoutes);
 app.use("/profesionales", profesionalesRoutes);
 app.use("/especialidades", especialidadesRoutes);
 
-// Convierte errores de validación y duplicados en respuestas HTTP claras, y registra los inesperados.
+// Middleware centralizado de errores: Express lo identifica por sus cuatro
+// parámetros. Las validaciones y conversiones de Mongoose indican datos de
+// entrada inválidos (400); una clave única duplicada responde conflicto (409).
+// Los demás errores se registran en el servidor y reciben una respuesta genérica
+// para no exponer detalles internos al cliente.
 app.use((error, _req, res, _next) => {
   if (error instanceof mongoose.Error.ValidationError || error instanceof mongoose.Error.CastError) {
     return res.status(400).json({ mensaje: error.message });
@@ -76,11 +96,14 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ mensaje: "Error interno del servidor" });
 });
 
-// Conecta la base de datos y asegura que exista el administrador inicial antes de aceptar solicitudes.
+// La inicialización es secuencial: primero se establece la conexión con la base
+// de datos y luego se crea el administrador inicial si hace falta. El `await`
+// impide que el servidor acepte solicitudes antes de completar ambos pasos.
 await conectarDB();
 await inicializarAdministrador();
 
-// Inicia el servidor después de completar las tareas de inicialización.
+// Empieza a escuchar en el puerto configurado únicamente después de inicializar
+// la aplicación y deja constancia de la dirección local en la consola.
 app.listen(PORT, () => {
   console.log(`Servidor de node escuchando en http://localhost:${PORT}`);
 });

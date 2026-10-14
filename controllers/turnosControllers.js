@@ -4,7 +4,9 @@ import Paciente from "../models/paciente.js";
 import Profesional from "../models/profesional.js";
 import Turno from "../models/turno.js";
 
-// Valida que el identificador recibido en la URL tenga el formato ObjectId de MongoDB.
+// Comprueba el formato del ID antes de cualquier consulta. Al devolver null
+// después de responder 400, permite que el controlador termine sin continuar
+// con una operación que no puede ser válida.
 function idDeRuta(req, res) {
   const id = req.params.id;
   if (!mongoose.isObjectIdOrHexString(id)) {
@@ -14,25 +16,33 @@ function idDeRuta(req, res) {
   return id;
 }
 
-// Convierte una fecha a formato local compatible con el campo datetime-local del formulario.
+// Forma una fecha y hora local con precisión de minutos, que es el formato
+// requerido por `datetime-local` y no incluye sufijo de zona horaria.
 function formatearFechaLocal(fecha) {
   const completar = valor => String(valor).padStart(2, "0");
   return `${fecha.getFullYear()}-${completar(fecha.getMonth() + 1)}-${completar(fecha.getDate())}T${completar(fecha.getHours())}:${completar(fecha.getMinutes())}`;
 }
 
-// Normaliza una fecha persistida para volver a mostrarla en un formulario de edición.
+// Convierte el valor guardado (que puede ser una fecha o una cadena) a Date y
+// centraliza el formato que se usa al precargar el formulario.
 function fechaParaFormulario(fecha) {
   return formatearFechaLocal(new Date(fecha));
 }
 
-// Limita las consultas de un profesional a sus propios turnos; el administrador no recibe filtro.
+// Los profesionales solo consultan turnos asociados a su propio perfil, usando
+// el ID validado que quedó en sesión. El administrador obtiene un filtro vacío
+// y por ello puede acceder a la colección completa.
 function filtroTurnos(req) {
   return req.session.usuario.rol === "profesional"
     ? { profesional: req.session.usuario.profesionalId }
     : {};
 }
 
-// Valida los datos de entrada, comprueba las referencias y calcula la hora de finalización.
+// Normaliza las referencias recibidas, valida que estén completas y con formato
+// correcto y confirma que paciente y especialidad existan. Busca el primer
+// profesional asociado a esa especialidad, valida la fecha y calcula el fin a
+// partir de la duración configurada en la especialidad. Devuelve un objeto de
+// error en vez de datos si alguna regla de negocio no se cumple.
 async function obtenerDatosTurno(body) {
   const pacienteId = String(body.paciente ?? "").trim();
   const especialidadId = String(body.especialidad ?? "").trim();
@@ -48,6 +58,8 @@ async function obtenerDatosTurno(body) {
     return { error: "El paciente o la especialidad seleccionados no son válidos" };
   }
 
+  // Estas lecturas son independientes: ejecutarlas en paralelo reduce la espera
+  // sin cambiar el resultado de las validaciones.
   const [paciente, especialidad] = await Promise.all([
     Paciente.findById(pacienteId),
     Especialidad.findById(especialidadId)
@@ -55,6 +67,8 @@ async function obtenerDatosTurno(body) {
   if (!paciente) return { error: "Paciente no encontrado" };
   if (!especialidad) return { error: "Especialidad no encontrada" };
 
+  // Selecciona de forma determinista el primer profesional de la especialidad
+  // (orden de ObjectId) porque el formulario solo solicita la especialidad.
   const profesional = await Profesional.findOne({
     especialidad: especialidad._id
   }).sort({ _id: 1 });
@@ -77,7 +91,8 @@ async function obtenerDatosTurno(body) {
   };
 }
 
-// Construye el documento de turno usando las referencias ya validadas.
+// Mantiene en un solo lugar la forma del documento persistido y permite que una
+// actualización conserve el estado existente en vez de reiniciarlo a reservado.
 function datosTurno(datos, estado = "Reservado") {
   return {
     paciente: datos.paciente._id,
@@ -89,7 +104,9 @@ function datosTurno(datos, estado = "Reservado") {
   };
 }
 
-// Reúne los datos de la lista; los perfiles profesionales solo cargan y ven sus propios turnos.
+// Prepara todos los datos requeridos por la plantilla: los turnos siempre están
+// filtrados por rol y con referencias pobladas; las listas para crear/editar
+// turnos solo se consultan para administradores, ya que el profesional no las usa.
 async function renderizarListaTurnos(req, res, opciones = {}) {
   const esProfesional = req.session.usuario.rol === "profesional";
   const [turnos, pacientes, especialidades] = await Promise.all([
@@ -113,7 +130,9 @@ async function renderizarListaTurnos(req, res, opciones = {}) {
   });
 }
 
-// Devuelve los turnos como HTML o JSON, aplicando siempre el filtro del usuario autenticado.
+// Decide entre renderizar la página completa o devolver los registros como JSON.
+// Ambas respuestas reutilizan el mismo filtro por rol para respetar el alcance
+// de acceso del profesional también en consultas de API.
 export async function obtenerTurnos(req, res) {
   if (req.headers.accept?.includes("text/html")) {
     return renderizarListaTurnos(req, res);
@@ -122,7 +141,9 @@ export async function obtenerTurnos(req, res) {
   res.json(turnos);
 }
 
-// Busca un turno por ID y, para los profesionales, garantiza que pertenezca a su perfil.
+// Combina el ID solicitado con el filtro del usuario en la consulta: un profesional
+// no puede leer un turno ajeno aunque conozca su identificador. Si no hay una
+// coincidencia visible, se responde 404.
 export async function obtenerTurnoPorId(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -134,7 +155,9 @@ export async function obtenerTurnoPorId(req, res) {
   res.json(turno);
 }
 
-// Crea un turno luego de validar los datos y responde según el tipo de cliente.
+// Aplica las validaciones y reglas de asignación compartidas antes de crear el
+// turno. Un error de negocio produce 400; en caso de éxito, el navegador vuelve
+// al listado y la API recibe el turno creado con estado HTTP 201.
 export async function agregarTurno(req, res) {
   const datos = await obtenerDatosTurno(req.body);
   if ("error" in datos) {
@@ -148,7 +171,9 @@ export async function agregarTurno(req, res) {
   res.status(201).json({ mensaje: "Turno agregado con éxito", turno });
 }
 
-// Actualiza un turno existente conservando su estado actual.
+// Verifica primero que el turno exista y luego valida los nuevos datos. Se
+// conservan el estado y la integridad de las referencias al actualizar; los
+// validadores de esquema se activan explícitamente para esta operación.
 export async function actualizarTurno(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -175,12 +200,15 @@ export async function actualizarTurno(req, res) {
   res.json({ mensaje: "Turno actualizado con éxito", turno });
 }
 
-// Renderiza el formulario de alta junto con los datos auxiliares necesarios.
+// Usa el mismo cargador de página que el listado, activando el modo de alta para
+// incluir las opciones disponibles sin duplicar la lógica de consulta.
 export async function mostrarFormularioNuevo(req, res) {
   return renderizarListaTurnos(req, res, { mostrarFormulario: true });
 }
 
-// Carga el turno y sus referencias para rellenar el formulario de edición.
+// Puebla las relaciones necesarias para la plantilla de edición. Si el turno
+// apunta a un documento eliminado, responde conflicto (409) en vez de construir
+// un formulario con datos incompletos; después adapta fecha e IDs al formato web.
 export async function mostrarFormularioEdicion(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -207,7 +235,8 @@ export async function mostrarFormularioEdicion(req, res) {
   });
 }
 
-// Elimina un turno existente y responde con redirección web o confirmación JSON.
+// Valida el ID, borra el turno y responde 404 cuando no existe. La interfaz web
+// usa una redirección para volver al listado; los clientes API reciben confirmación.
 export async function eliminarTurno(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;

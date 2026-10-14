@@ -3,12 +3,14 @@ import Especialidad from "../models/especialidad.js";
 import Profesional from "../models/profesional.js";
 import Turno from "../models/turno.js";
 
-// Determina si la solicitud espera una página del navegador en vez de datos JSON.
+// Inspecciona Accept para reutilizar los controladores desde la interfaz web y
+// desde clientes de API. Si el encabezado no existe, el comportamiento es JSON.
 function solicitaHtml(req) {
   return req.headers.accept?.includes("text/html") ?? false;
 }
 
-// Valida el identificador de especialidad recibido en la URL.
+// Valida antes de consultar MongoDB para responder con un 400 claro, en vez de
+// dejar que un identificador mal formado se convierta en un error de Mongoose.
 function idDeRuta(req, res) {
   const id = req.params.id;
   if (!mongoose.isObjectIdOrHexString(id)) {
@@ -18,13 +20,15 @@ function idDeRuta(req, res) {
   return id;
 }
 
-// Da formato local a la fecha para usarla en un control datetime-local.
+// Construye el formato local que espera `datetime-local` (sin zona horaria ni
+// segundos); se usa para evitar valores que el navegador no pueda mostrar.
 function formatearFechaLocal(fecha) {
   const completar = valor => String(valor).padStart(2, "0");
   return `${fecha.getFullYear()}-${completar(fecha.getMonth() + 1)}-${completar(fecha.getDate())}T${completar(fecha.getHours())}:${completar(fecha.getMinutes())}`;
 }
 
-// Convierte y selecciona los campos de entrada que forman una especialidad.
+// Crea una lista explícita de propiedades persistibles y convierte la duración
+// a número para que Mongoose reciba el tipo esperado por el modelo.
 function datosEspecialidad(body) {
   return {
     nombre_especialidad: body.nombre_especialidad,
@@ -33,7 +37,9 @@ function datosEspecialidad(body) {
   };
 }
 
-// Carga el listado y combina sus valores iniciales con las opciones de vista solicitadas.
+// Comparte el armado de la página de listado entre los flujos normal, alta y
+// edición. Los valores predeterminados mantienen la vista consistente y las
+// opciones al final permiten reemplazarlos solo para el caso que las necesite.
 async function renderizarLista(res, opciones = {}) {
   const especialidades = await Especialidad.find().sort({ nombre_especialidad: 1 });
   return res.render("listEspecialidades", {
@@ -45,7 +51,8 @@ async function renderizarLista(res, opciones = {}) {
   });
 }
 
-// Lista especialidades en HTML o JSON según el tipo de cliente.
+// Para el navegador renderiza la plantilla reutilizando el helper; para una API
+// devuelve la misma colección ordenada como JSON, sin cargar datos de vista.
 export async function obtenerEspecialidades(req, res) {
   if (solicitaHtml(req)) {
     return renderizarLista(res);
@@ -53,12 +60,14 @@ export async function obtenerEspecialidades(req, res) {
   res.json(await Especialidad.find().sort({ nombre_especialidad: 1 }));
 }
 
-// Muestra el formulario de alta junto a las especialidades existentes.
+// El formulario de alta comparte la lista actual y activa el estado de creación,
+// por lo que no se duplica aquí la consulta ni la configuración de la vista.
 export async function mostrarFormularioNuevo(_req, res) {
   return renderizarLista(res, { mostrarFormulario: true });
 }
 
-// Busca una especialidad por su identificador y responde con el documento encontrado.
+// Primero valida el ID y luego distingue entre un documento inexistente (404)
+// y uno encontrado, que se entrega como JSON para este endpoint de consulta.
 export async function obtenerEspecialidadPorId(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -70,7 +79,9 @@ export async function obtenerEspecialidadPorId(req, res) {
   res.json(especialidad);
 }
 
-// Crea una especialidad con los campos normalizados y responde al navegador o a la API.
+// Normaliza los campos antes de crear el documento. Las solicitudes del
+// navegador vuelven al listado; las solicitudes de API reciben el documento
+// recién creado con el código HTTP 201.
 export async function crearEspecialidad(req, res) {
   const especialidad = await Especialidad.create(datosEspecialidad(req.body));
   if (solicitaHtml(req)) {
@@ -79,7 +90,8 @@ export async function crearEspecialidad(req, res) {
   res.status(201).json(especialidad);
 }
 
-// Carga una especialidad para mostrar sus valores en el formulario de edición.
+// Comprueba el identificador y que el registro exista antes de reutilizar la
+// vista de listado con el formulario precargado en modo edición.
 export async function mostrarFormularioEditar(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -92,7 +104,9 @@ export async function mostrarFormularioEditar(req, res) {
   return renderizarLista(res, { especialidad, mostrarFormulario: true, editando: true });
 }
 
-// Actualiza los campos de una especialidad y valida el documento resultante.
+// `$set` limita la actualización a los campos preparados por el helper;
+// `new` devuelve la versión actualizada y `runValidators` aplica las reglas del
+// esquema también en operaciones de actualización.
 export async function actualizarEspecialidad(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -112,7 +126,9 @@ export async function actualizarEspecialidad(req, res) {
   res.json(especialidad);
 }
 
-// Conserva especialidades referenciadas por profesionales o turnos y elimina las demás.
+// Comprueba en paralelo las dos relaciones que impedirían borrar la especialidad.
+// El 409 protege la integridad referencial; solo si está libre se intenta borrar,
+// lo que además permite diferenciar un ID válido pero inexistente (404).
 export async function eliminarEspecialidad(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;

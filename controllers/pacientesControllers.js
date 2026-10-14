@@ -2,12 +2,14 @@ import mongoose from "mongoose";
 import Paciente from "../models/paciente.js";
 import Turno from "../models/turno.js";
 
-// Detecta solicitudes de navegador para elegir entre vistas HTML y respuestas JSON.
+// Usa el tipo de contenido que acepta el cliente para decidir si el resultado
+// debe ser una página HTML o datos JSON. Sin encabezado Accept se usa JSON.
 function solicitaHtml(req) {
   return req.headers.accept?.includes("text/html") ?? false;
 }
 
-// Comprueba el ObjectId de la URL antes de consultar MongoDB.
+// Rechaza IDs mal formados antes de consultar MongoDB, con una respuesta 400
+// explícita en vez de depender de un error de conversión del modelo.
 function idDeRuta(req, res) {
   const id = req.params.id;
   if (!mongoose.isObjectIdOrHexString(id)) {
@@ -17,7 +19,9 @@ function idDeRuta(req, res) {
   return id;
 }
 
-// Extrae solo los campos permitidos para crear o modificar un paciente.
+// Permite únicamente las propiedades reconocidas del paciente, evitando que
+// campos adicionales enviados por el cliente modifiquen otros datos del modelo.
+// Los campos omitidos se excluyen para que una actualización parcial los conserve.
 function datosPaciente(body) {
   const campos = ["nombre", "apellido", "dni", "fecha_nacimiento", "telefono", "email"];
   return Object.fromEntries(
@@ -25,12 +29,14 @@ function datosPaciente(body) {
   );
 }
 
-// Formatea la fecha de nacimiento para el control HTML de tipo date.
+// El control `date` requiere `YYYY-MM-DD`. La conversión a ISO y el recorte
+// eliminan la parte horaria que no forma parte de la fecha de nacimiento.
 function fechaParaFormulario(fecha) {
   return fecha ? new Date(fecha).toISOString().slice(0, 10) : "";
 }
 
-// Obtiene todos los pacientes y responde con una vista o un arreglo JSON.
+// Ordena la colección una sola vez y reutiliza ese resultado para HTML o JSON;
+// la vista recibe además los valores iniciales necesarios para el formulario.
 export async function obtenerPacientes(req, res) {
   const pacientes = await Paciente.find().sort({ _id: 1 });
   if (solicitaHtml(req)) {
@@ -44,7 +50,8 @@ export async function obtenerPacientes(req, res) {
   res.json(pacientes);
 }
 
-// Muestra el formulario de alta junto al listado actual de pacientes.
+// Carga el listado para mantener visible la tabla en la misma página que el
+// formulario, y activa el estado de creación sin asociar un paciente existente.
 export async function mostrarFormularioNuevo(_req, res) {
   const pacientes = await Paciente.find().sort({ _id: 1 });
   res.render("listPacientes", {
@@ -55,7 +62,8 @@ export async function mostrarFormularioNuevo(_req, res) {
   });
 }
 
-// Busca un paciente por ID y devuelve un error si no existe.
+// Valida primero el ID de ruta; una vez consultado, responde 404 si el paciente
+// no existe o serializa el documento encontrado para el cliente de API.
 export async function obtenerPacientePorId(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -67,7 +75,8 @@ export async function obtenerPacientePorId(req, res) {
   res.json(paciente);
 }
 
-// Crea un paciente con los campos permitidos y adapta la respuesta al cliente.
+// Construye el documento únicamente con campos permitidos. Los formularios
+// vuelven al listado y las API reciben una confirmación y el nuevo documento.
 export async function agregarPaciente(req, res) {
   const paciente = await Paciente.create(datosPaciente(req.body));
 
@@ -77,7 +86,9 @@ export async function agregarPaciente(req, res) {
   res.status(201).json({ mensaje: "Paciente agregado con éxito", paciente });
 }
 
-// Carga los datos del paciente y prepara la fecha para editarla desde la vista.
+// Obtiene en paralelo el registro que se editará y la colección para la tabla.
+// La fecha se adapta al formato del control HTML y `toObject()` permite pasar a
+// Pug un objeto plano con ese valor de presentación reemplazado.
 export async function mostrarFormularioEdicion(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -98,7 +109,9 @@ export async function mostrarFormularioEdicion(req, res) {
   });
 }
 
-// Aplica los cambios permitidos y responde con redirección web o el documento actualizado.
+// `$set` y el filtro de campos evitan sobrescribir propiedades no enviadas;
+// `new` devuelve la versión guardada y `runValidators` mantiene las reglas del
+// esquema. Se devuelve 404 si el ID válido ya no corresponde a un registro.
 export async function editarPaciente(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -118,7 +131,9 @@ export async function editarPaciente(req, res) {
   res.json({ mensaje: "Paciente actualizado con éxito", paciente });
 }
 
-// Impide eliminar pacientes asociados a turnos y borra solo registros sin referencias.
+// Mantiene la integridad de los turnos existentes: si hay una referencia al
+// paciente, informa conflicto (409); de lo contrario intenta borrarlo y responde
+// 404 si no existía. Los formularios vuelven al listado y las API reciben JSON.
 export async function eliminarPaciente(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;

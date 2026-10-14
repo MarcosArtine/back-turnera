@@ -3,12 +3,14 @@ import Especialidad from "../models/especialidad.js";
 import Profesional from "../models/profesional.js";
 import Turno from "../models/turno.js";
 
-// Determina si la ruta debe responder con una página HTML o con JSON.
+// Consulta el encabezado Accept para compartir los endpoints entre la interfaz
+// web y clientes de API. Si no se solicita HTML, se responde con JSON.
 function solicitaHtml(req) {
   return req.headers.accept?.includes("text/html") ?? false;
 }
 
-// Valida el identificador del profesional antes de acceder a la base.
+// Evita lanzar consultas con un ObjectId inválido y entrega un error 400
+// controlado; el valor se devuelve sin modificar si es válido.
 function idDeRuta(req, res) {
   const id = req.params.id;
   if (!mongoose.isObjectIdOrHexString(id)) {
@@ -18,7 +20,9 @@ function idDeRuta(req, res) {
   return id;
 }
 
-// Filtra los datos recibidos para que solo se persistan campos del perfil profesional.
+// Crea un objeto de persistencia con una lista permitida de datos del perfil.
+// Solo copia campos presentes, así las actualizaciones parciales no borran los
+// valores existentes; especialidad se agrega de forma explícita como referencia.
 function datosProfesional(body) {
   const campos = [
     "nombre",
@@ -37,7 +41,8 @@ function datosProfesional(body) {
   return datos;
 }
 
-// Verifica el formato y existencia de la especialidad asociada.
+// Comprueba primero el formato de la referencia y luego su existencia. Devuelve
+// un booleano para que alta y edición apliquen la misma regla de integridad.
 async function validarEspecialidad(idEspecialidad) {
   if (!mongoose.isObjectIdOrHexString(idEspecialidad)) {
     return false;
@@ -45,7 +50,9 @@ async function validarEspecialidad(idEspecialidad) {
   return Boolean(await Especialidad.exists({ _id: idEspecialidad }));
 }
 
-// Devuelve la lista de profesionales y, para el navegador, prepara el formulario de alta.
+// Carga profesionales con el nombre de su especialidad para evitar mostrar solo
+// el ObjectId. HTML también necesita la lista de opciones del formulario; las
+// solicitudes JSON reciben los profesionales poblados, sin datos de presentación.
 export async function obtenerProfesionales(req, res) {
   const profesionales = await Profesional.find()
     .populate("especialidad", "nombre_especialidad")
@@ -63,7 +70,8 @@ export async function obtenerProfesionales(req, res) {
   res.json(profesionales);
 }
 
-// Carga los datos auxiliares y muestra vacío el formulario de creación.
+// Consulta en paralelo la tabla y las especialidades disponibles, ya que ambas
+// colecciones son independientes y se necesitan para renderizar la página de alta.
 export async function mostrarFormularioNuevo(_req, res) {
   const [profesionales, especialidades] = await Promise.all([
     Profesional.find().populate("especialidad", "nombre_especialidad").sort({ _id: 1 }),
@@ -78,7 +86,8 @@ export async function mostrarFormularioNuevo(_req, res) {
   });
 }
 
-// Busca un profesional y completa su referencia a especialidad antes de responder.
+// Rechaza IDs mal formados, luego completa la referencia de especialidad para
+// entregar información útil en JSON y devuelve 404 si el perfil no existe.
 export async function obtenerProfesionalPorId(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -90,7 +99,8 @@ export async function obtenerProfesionalPorId(req, res) {
   res.json(profesional);
 }
 
-// Valida la especialidad y crea el perfil profesional.
+// Filtra primero los campos de entrada y exige una especialidad existente antes
+// de insertar. Así el profesional no puede quedar asociado a una referencia rota.
 export async function agregarProfesional(req, res) {
   const datos = datosProfesional(req.body);
   if (!(await validarEspecialidad(datos.especialidad))) {
@@ -104,7 +114,9 @@ export async function agregarProfesional(req, res) {
   res.status(201).json({ mensaje: "Profesional agregado con éxito", profesional });
 }
 
-// Obtiene el perfil, el listado y las especialidades para completar la edición.
+// Recupera en paralelo el perfil objetivo, la tabla y las opciones del selector.
+// Comprueba que las referencias pobladas existan antes de pasar sus valores a la
+// vista; una relación rota se informa como conflicto (409).
 export async function mostrarFormularioEdicion(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -133,7 +145,9 @@ export async function mostrarFormularioEdicion(req, res) {
   });
 }
 
-// Actualiza únicamente los campos permitidos y valida cualquier cambio de especialidad.
+// Solo valida la referencia si el cliente incluyó un cambio de especialidad;
+// una actualización de otros campos conserva la asociación actual. Los
+// validadores de esquema se ejecutan también en la actualización de MongoDB.
 export async function actualizarProfesional(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
@@ -161,7 +175,9 @@ export async function actualizarProfesional(req, res) {
   res.json({ mensaje: "Profesional actualizado con éxito", profesional });
 }
 
-// Evita borrar profesionales con turnos asociados y elimina los perfiles sin referencias.
+// No permite eliminar un perfil que tenga turnos asociados. Si no hay referencias,
+// borra el documento; distingue el caso de registro inexistente y adapta la
+// respuesta entre redirección para el navegador y JSON para la API.
 export async function eliminarProfesional(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;

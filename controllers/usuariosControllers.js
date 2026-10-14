@@ -6,7 +6,10 @@ import Usuario from "../models/usuario.js";
 
 const RONDAS_HASH = 12;
 
-// Comprueba la configuración administrativa y crea o actualiza sus credenciales cifradas.
+// Valida la configuración del administrador inicial antes de tocar la base.
+// Si el correo ya corresponde a un administrador, compara la contraseña
+// configurada con el hash existente y solo lo reemplaza cuando cambió; en caso
+// contrario crea el usuario con una contraseña cifrada usando bcrypt.
 export async function inicializarAdministrador() {
   const correo = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const contrasena = process.env.ADMIN_PASSWORD;
@@ -25,6 +28,8 @@ export async function inicializarAdministrador() {
     if (existente.rol !== "admin") {
       throw new Error("ADMIN_EMAIL ya existe y no tiene rol de administrador");
     }
+    // bcrypt.compare puede rechazar hashes corruptos; tratarlos como no
+    // coincidentes permite restablecer la credencial desde la configuración.
     const contrasenaCoincide = existente.contrasena
       ? await bcrypt.compare(contrasena, existente.contrasena).catch(() => false)
       : false;
@@ -43,7 +48,8 @@ export async function inicializarAdministrador() {
   console.log("Usuario administrador inicial creado");
 }
 
-// Muestra el formulario de acceso o redirige a quienes ya iniciaron sesión.
+// Evita que una sesión activa vuelva a la pantalla de acceso y la dirige al área
+// de turnos; para visitantes sin sesión renderiza el formulario independiente.
 export async function mostrarLogin(req, res) {
   if (req.session.usuario) {
     return res.redirect("/turnos");
@@ -51,7 +57,8 @@ export async function mostrarLogin(req, res) {
   res.render("login", { layout: false });
 }
 
-// Carga las especialidades que puede elegir una persona al registrarse como profesional.
+// Si todavía no hay sesión, carga las opciones válidas para asociar al perfil
+// profesional y renderiza el formulario público de registro.
 export async function mostrarRegistro(req, res) {
   if (req.session.usuario) {
     return res.redirect("/turnos");
@@ -61,7 +68,12 @@ export async function mostrarRegistro(req, res) {
   res.render("register", { layout: false, especialidades });
 }
 
-// Valida la solicitud pública y crea de forma vinculada el perfil profesional y su cuenta.
+// Normaliza los datos de texto y correo y valida los campos requeridos, el
+// ObjectId de especialidad y la contraseña antes de consultar o escribir datos.
+// Luego comprueba en paralelo que la especialidad exista y que el correo no esté
+// usado por una cuenta ni por otro perfil. Como las dos creaciones deben
+// mantenerse vinculadas, elimina el perfil si falla el alta de usuario; si esa
+// compensación también falla, propaga ambos errores para no ocultar el problema.
 export async function registrarProfesional(req, res, next) {
   try {
     const cuerpo = req.body ?? {};
@@ -107,6 +119,8 @@ export async function registrarProfesional(req, res, next) {
       return res.status(409).json({ mensaje: "Ya existe una cuenta o profesional con ese correo" });
     }
 
+    // MongoDB no agrupa estas dos escrituras en una transacción aquí; por eso se
+    // conserva el documento creado para poder compensar una creación parcial.
     let profesional;
     try {
       profesional = await Profesional.create({
@@ -149,7 +163,12 @@ export async function registrarProfesional(req, res, next) {
   }
 }
 
-// Verifica las credenciales, regenera la sesión y guarda el rol y perfil asociado.
+// Normaliza el correo, valida que se recibieran credenciales y carga el hash
+// explícitamente junto con la referencia profesional. Solo acepta hashes bcrypt
+// reconocibles, roles habilitados y perfiles profesionales existentes; ante
+// cualquier fallo devuelve el mismo error para no revelar qué dato no coincidió.
+// Tras autenticar, regenera la sesión para evitar fijación de sesión y guarda en
+// ella solo los datos necesarios para identificar rol y perfil.
 export async function iniciarSesion(req, res, next) {
   try {
     const cuerpo = req.body ?? {};
@@ -180,6 +199,8 @@ export async function iniciarSesion(req, res, next) {
       return res.status(401).json({ mensaje: "Correo o contraseña incorrectos, o usuario sin permisos" });
     }
 
+    // Las operaciones de sesión usan callbacks: cada error se entrega al
+    // middleware central y la respuesta de éxito espera a que la sesión se guarde.
     req.session.regenerate(error => {
       if (error) return next(error);
       req.session.usuario = {
@@ -200,7 +221,8 @@ export async function iniciarSesion(req, res, next) {
   }
 }
 
-// Destruye la sesión y limpia la cookie de autenticación del navegador.
+// Invalida la sesión almacenada antes de borrar su cookie del navegador. Si la
+// destrucción falla, delega el error y no comunica un cierre exitoso prematuro.
 export function cerrarSesion(req, res, next) {
   req.session.destroy(error => {
     if (error) return next(error);

@@ -31,7 +31,6 @@ block content
     table
       thead
         tr
-          th _id
           th Nombre
           th Apellido
           th DNI 
@@ -42,7 +41,6 @@ block content
       tbody
         each paciente in pacientes
           tr
-            td= paciente._id
             td= paciente.nombre
             td= paciente.apellido
             td= paciente.dni

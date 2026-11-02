@@ -23,6 +23,7 @@ block content
     table
       thead
         tr
+          th _id
           th Nombre
           th Descripción
           th Duración
@@ -30,6 +31,7 @@ block content
       tbody
         each especialidad in especialidades
           tr
+            td= especialidad._id
             td= especialidad.nombre_especialidad
             td= especialidad.descripcion
             td= especialidad.duracion_turno_default

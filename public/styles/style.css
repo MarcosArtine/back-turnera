@@ -1,50 +1,485 @@
-*{
+/* ==========================================================================
+   TurnoFlex — hoja de estilos
+   Solo usa selectores de elementos y atributos: no hace falta tocar las vistas
+   Pug ni el backend. Para cambiar la paleta basta editar las variables de :root.
+   ========================================================================== */
+
+:root {
+  --color-primario: #0f766e;
+  --color-primario-oscuro: #115e59;
+  --color-primario-suave: #ccfbf1;
+  --color-peligro: #b91c1c;
+  --color-peligro-suave: #fee2e2;
+  --color-fondo: #f1f5f4;
+  --color-superficie: #ffffff;
+  --color-texto: #1f2937;
+  --color-texto-suave: #64748b;
+  --color-borde: #d9e2e0;
+  --radio: 12px;
+  --sombra: 0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.05);
+}
+
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
 body {
-  font-family: Arial, sans-serif;
-  background-color: #f4f4f4;
-  color: #333;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--color-fondo);
+  color: var(--color-texto);
   line-height: 1.6;
-  padding: 20px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
 }
 
+/* ---------- Cabecera y navegación ---------- */
+
 header {
-  background-color: #007BFF;
+  background: linear-gradient(135deg, var(--color-primario), var(--color-primario-oscuro));
   color: #fff;
-  padding: 10px 0;
-  text-align: center;
+  border-radius: var(--radio);
+  padding: 18px 24px 14px;
+  box-shadow: var(--sombra);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+}
+
+header h1 {
+  font-size: 1.4rem;
+  letter-spacing: 0.2px;
 }
 
 nav ul {
   list-style: none;
   display: flex;
-  justify-content: center;
-  padding: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
 }
 
 nav ul li {
-  margin: 0 15px;
+  border-radius: 8px;
+  transition: background-color 0.15s;
+}
+
+nav ul li:hover {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 nav ul li a {
+  display: block;
+  padding: 6px 12px;
   color: #fff;
   text-decoration: none;
-  font-weight: bold;
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
-li:hover {
-  background-color: #0056b3;
+/* El botón de cerrar sesión se ve como un botón "fantasma" dentro de la barra. */
+nav form {
+  display: inline;
+}
+
+nav button {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  padding: 5px 12px;
+  font-size: 0.9rem;
+}
+
+nav button:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: #fff;
+}
+
+/* Las líneas horizontales del layout quedan como separadores casi invisibles. */
+hr {
+  border: 0;
+  height: 1px;
+  background: transparent;
+  margin: 12px 0;
+}
+
+/* ---------- Títulos ---------- */
+
+h2 {
+  font-size: 1.5rem;
+  margin: 8px 0 16px;
+  color: var(--color-primario-oscuro);
+}
+
+h3 {
+  font-size: 1.15rem;
+  margin-bottom: 12px;
+}
+
+/* ---------- Formularios ---------- */
+
+/* Los formularios de la página (no los de la barra ni los de las filas) son tarjetas. */
+body > form {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  max-width: 560px;
+}
+
+/* El formulario que solo tiene el botón "Nuevo ..." no necesita ser tarjeta. */
+body > form[method="GET"] {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  max-width: none;
+}
+
+form div {
+  margin-bottom: 14px;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+input,
+select {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  background: #fff;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  padding: 9px 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-primario);
+  box-shadow: 0 0 0 3px var(--color-primario-suave);
+}
+
+/* ---------- Botones y enlaces ---------- */
+
+button {
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+  background: var(--color-primario);
+  border: 1px solid var(--color-primario);
+  border-radius: 8px;
+  padding: 8px 16px;
+  transition: background-color 0.15s, transform 0.05s;
+}
+
+button:hover {
+  background: var(--color-primario-oscuro);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--color-primario-suave);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* Eliminar: se detecta por la URL de acción del formulario. */
+form[action$="/eliminar"] button {
+  background: var(--color-peligro-suave);
+  color: var(--color-peligro);
+  border-color: transparent;
+}
+
+form[action$="/eliminar"] button:hover {
+  background: var(--color-peligro);
+  color: #fff;
+}
+
+/* Editar: botón secundario con borde. */
+form[action$="/editar"] button {
+  background: #fff;
+  color: var(--color-primario-oscuro);
+  border-color: var(--color-borde);
+}
+
+form[action$="/editar"] button:hover {
+  background: var(--color-primario-suave);
+  border-color: var(--color-primario);
+}
+
+/* "Cancelar" dentro de un formulario. */
+form a {
+  display: inline-block;
+  margin-left: 12px;
+  color: var(--color-texto-suave);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+form a:hover {
+  color: var(--color-texto);
+  text-decoration: underline;
+}
+
+a {
+  color: var(--color-primario);
+}
+
+/* ---------- Tablas ---------- */
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  overflow: hidden;
+  margin-top: 16px;
+  font-size: 0.93rem;
+}
+
+th {
+  text-align: left;
+  background: var(--color-primario-suave);
+  color: var(--color-primario-oscuro);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 14px;
+  white-space: nowrap;
+}
+
+td {
+  padding: 11px 14px;
+  border-top: 1px solid var(--color-borde);
+  vertical-align: middle;
+}
+
+tbody tr:nth-child(even) {
+  background: #f8fbfa;
+}
+
+tbody tr:hover {
+  background: #ecf7f5;
+}
+
+/* La primera columna es el _id de Mongo: se muestra chico, gris y recortado. */
+th:first-child,
+td:first-child {
+  max-width: 96px;
+}
+
+td:first-child {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  color: var(--color-texto-suave);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Los botones de acciones, uno al lado del otro y más compactos. La vista pone
+   un "|" como texto entre ellos: con font-size 0 en la celda se oculta, y cada
+   botón vuelve a definir su propio tamaño. */
+td:has(> form) {
+  white-space: nowrap;
+  font-size: 0;
+}
+
+td form {
+  display: inline-block;
+  margin: 0 2px;
+}
+
+td form div {
+  margin: 0;
+}
+
+td button {
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+/* ---------- Mensajes y pie ---------- */
+
+p {
+  margin: 12px 0;
+}
+
+#form-message {
+  min-height: 1.4em;
+  font-weight: 600;
+}
+
+#form-message[role="alert"] {
+  color: var(--color-peligro);
+}
+
+#form-message[role="status"] {
+  color: var(--color-primario-oscuro);
+}
+
+footer {
+  text-align: center;
+  color: var(--color-texto-suave);
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+
+/* ---------- Pantallas de ingreso y registro (sin cabecera) ---------- */
+
+/* Estas páginas son un <main> suelto: se muestra como una tarjeta centrada. */
+body:not(:has(header)) {
+  max-width: 460px;
+  padding-top: 8vh;
 }
 
 main {
-  max-width: 800px;
-  margin: 20px auto;
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 5px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 28px 28px 22px;
+}
+
+main h1 {
+  color: var(--color-primario);
+  font-size: 1.8rem;
+  text-align: center;
+}
+
+main h2 {
+  text-align: center;
+  color: var(--color-texto);
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+main form button[type="submit"] {
+  width: 100%;
+  padding: 10px 16px;
+  margin-top: 4px;
+}
+
+main > a,
+main > p:last-child {
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+}
+
+main > a {
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ---------- Estado del turno (etiqueta de color) ---------- */
+
+/* La vista de turnos agrega la clase estado-<estado en minúscula> al <span>. */
+.estado {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.estado-reservado {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.estado-atendido,
+.estado-completado {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.estado-cancelado {
+  background: var(--color-peligro-suave);
+  color: var(--color-peligro);
+}
+
+/* ---------- Listas vacías ---------- */
+
+/* El mensaje "No hay ... disponibles" es un <p> suelto dentro del <body>. */
+body > p {
+  background: var(--color-superficie);
+  border: 1px dashed var(--color-borde);
+  border-radius: var(--radio);
+  color: var(--color-texto-suave);
+  text-align: center;
+  padding: 28px 16px;
+  margin-top: 16px;
+}
+
+/* ---------- Marca en la cabecera ---------- */
+
+header h1::before {
+  content: "+";
+  display: inline-grid;
+  place-items: center;
+  width: 1.5em;
+  height: 1.5em;
+  margin-right: 0.5em;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* Respeta a quienes tienen desactivadas las animaciones en su sistema. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
+
+/* ---------- Pantallas chicas ---------- */
+
+@media (max-width: 800px) {
+  header {
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* La tabla se desplaza horizontalmente en vez de romper el diseño. */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  body > form {
+    max-width: none;
+  }
 }

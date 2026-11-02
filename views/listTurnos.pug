@@ -28,6 +28,7 @@ block content
     table
       thead
         tr
+          th _id
           th Nombre del Paciente
           th Apellido del Paciente
           th Profesional
@@ -39,12 +40,13 @@ block content
       tbody
         each turno in turnos
           tr
+            td= turno._id
             td= turno.paciente ? turno.paciente.nombre : 'Paciente eliminado'
             td= turno.paciente ? turno.paciente.apellido : ''
             td= turno.profesional ? `${turno.profesional.nombre} ${turno.profesional.apellido}` : 'Profesional eliminado'
             td= new Date(turno.fecha_hora_inicio).toLocaleString()
             td= turno.especialidad ? turno.especialidad.nombre_especialidad : 'Especialidad eliminada'
-            td= turno.estado
+            td: span.estado(class=`estado-${String(turno.estado || '').toLowerCase()}`)= turno.estado
             if !esProfesional
               td
                 form(method="GET", action=`/turnos/${turno._id}/editar`, style="display:inline")

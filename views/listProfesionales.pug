@@ -34,7 +34,6 @@ block content
     table
       thead
         tr
-          th _id
           th Nombre
           th Apellido
           th Especialidad
@@ -44,7 +43,6 @@ block content
       tbody
         each profesional in profesionales
           tr
-            td= profesional._id
             td= profesional.nombre
             td= profesional.apellido
             td= profesional.especialidad ? profesional.especialidad.nombre_especialidad : 'Sin especialidad'

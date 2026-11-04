@@ -28,7 +28,6 @@ block content
     table
       thead
         tr
-          th _id
           th Nombre del Paciente
           th Apellido del Paciente
           th Profesional
@@ -40,7 +39,6 @@ block content
       tbody
         each turno in turnos
           tr
-            td= turno._id
             td= turno.paciente ? turno.paciente.nombre : 'Paciente eliminado'
             td= turno.paciente ? turno.paciente.apellido : ''
             td= turno.profesional ? `${turno.profesional.nombre} ${turno.profesional.apellido}` : 'Profesional eliminado'

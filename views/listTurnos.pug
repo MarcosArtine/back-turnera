@@ -11,7 +11,7 @@ block content
           each paciente in pacientes
             option(value=paciente._id, selected=turno && turno.pacienteId === paciente._id.toString())= `${paciente.apellido}, ${paciente.nombre}`
       div
-        label(for="fechaHora") Fecha y Hora:
+        label(for="fechaHora") Fecha y hora (Buenos Aires):
         input(type="datetime-local", id="fechaHora", name="fechaHora", value=turno ? turno.fecha_hora_inicio.slice(0, 16) : '', required)
       div
         label(for="especialidad") Especialidad:
@@ -19,6 +19,17 @@ block content
           option(value="") Seleccione una especialidad
           each especialidad in especialidades
             option(value=especialidad._id, selected=turno && turno.especialidadId === especialidad._id.toString())= especialidad.nombre_especialidad
+      div
+        label(for="profesional") Profesional:
+        select(id="profesional", name="profesional", required)
+          option(value="") Seleccione un profesional
+          each profesional in profesionales
+            option(
+              value=profesional._id,
+              data-especialidad=profesional.especialidad ? profesional.especialidad._id.toString() : '',
+              selected=turno && turno.profesionalId === profesional._id.toString()
+            )= profesional.especialidad ? profesional.apellido + ', ' + profesional.nombre + ' - ' + profesional.especialidad.nombre_especialidad : profesional.apellido + ', ' + profesional.nombre
+      p Los turnos se atienden de lunes a viernes, de 09:00 a 17:00 (hora de Buenos Aires).
       button(type="submit")= editando ? 'Actualizar Turno' : 'Guardar Turno'
       a(href="/turnos") Cancelar
   else if !esProfesional
@@ -42,7 +53,7 @@ block content
             td= turno.paciente ? turno.paciente.nombre : 'Paciente eliminado'
             td= turno.paciente ? turno.paciente.apellido : ''
             td= turno.profesional ? `${turno.profesional.nombre} ${turno.profesional.apellido}` : 'Profesional eliminado'
-            td= new Date(turno.fecha_hora_inicio).toLocaleString()
+            td= `${formatearFecha(turno.fecha_hora_inicio)} (Buenos Aires)`
             td= turno.especialidad ? turno.especialidad.nombre_especialidad : 'Especialidad eliminada'
             td: span.estado(class=`estado-${String(turno.estado || '').toLowerCase()}`)= turno.estado
             if !esProfesional

@@ -33,11 +33,12 @@ html(lang="es")
             label(for="correo_electronico") Correo electrónico:
             input(type="email", name="correo_electronico", id="correo_electronico", autocomplete="email", required)
           div
-            label(for="contrasena") Contraseña (mínimo 8 caracteres):
-            input(type="password", name="contrasena", id="contrasena", autocomplete="new-password", minlength="8", required)
+            label(for="contrasena") Contraseña (mínimo 12 caracteres):
+            input(type="password", name="contrasena", id="contrasena", autocomplete="new-password", minlength="12", aria-describedby="ayuda-contrasena", required)
+            p#ayuda-contrasena Usa una frase fácil de recordar. Máximo 72 bytes UTF-8.
           div
             label(for="confirmar_contrasena") Confirmar contraseña:
-            input(type="password", name="confirmar_contrasena", id="confirmar_contrasena", autocomplete="new-password", minlength="8", required)
+            input(type="password", name="confirmar_contrasena", id="confirmar_contrasena", autocomplete="new-password", minlength="12", required)
           button(type="submit") Crear cuenta
         p#form-message(role="alert", aria-live="polite")
       else

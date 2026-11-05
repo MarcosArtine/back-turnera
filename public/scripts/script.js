@@ -39,6 +39,7 @@ document.addEventListener("submit", async event => {
         ? undefined
         : JSON.stringify(Object.fromEntries(new FormData(form)))
     });
+
     const contentType = response.headers.get("content-type") || "";
     const result = contentType.includes("application/json")
       ? await response.json()
@@ -85,3 +86,25 @@ document.addEventListener("submit", async event => {
     }
   }
 });
+
+function actualizarProfesionalesDisponibles(especialidad, profesional, restablecerSeleccion) {
+  for (const opcion of profesional.options) {
+    if (!opcion.value) continue;
+    const coincide = opcion.dataset.especialidad === especialidad.value;
+    opcion.hidden = !coincide;
+    opcion.disabled = !coincide;
+    if (restablecerSeleccion && profesional.value === opcion.value && !coincide) {
+      profesional.value = "";
+    }
+  }
+}
+
+for (const formulario of document.querySelectorAll('form select[name="especialidad"]')) {
+  const especialidad = formulario;
+  const profesional = especialidad.form?.querySelector('select[name="profesional"]');
+  if (!profesional) continue;
+  actualizarProfesionalesDisponibles(especialidad, profesional, false);
+  especialidad.addEventListener("change", () =>
+    actualizarProfesionalesDisponibles(especialidad, profesional, true)
+  );
+}

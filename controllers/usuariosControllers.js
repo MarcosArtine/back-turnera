@@ -1,10 +1,16 @@
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import { randomUUID } from "node:crypto";
 import Especialidad from "../models/especialidad.js";
 import Profesional from "../models/profesional.js";
+import TokenRevocado from "../models/tokenRevocado.js";
 import Usuario from "../models/usuario.js";
+import { NOMBRE_COOKIE_JWT, OPCIONES_COOKIE_JWT } from "../middleware/autenticacion.js";
+import { validarContrasena } from "../utils/contrasena.js";
 
 const RONDAS_HASH = 12;
+const DURACION_JWT_MS = 30 * 60 * 1000;
 
 // Valida la configuración del administrador inicial antes de tocar la base.
 // Si el correo ya corresponde a un administrador, compara la contraseña
@@ -14,14 +20,13 @@ export async function inicializarAdministrador() {
   const correo = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const contrasena = process.env.ADMIN_PASSWORD;
 
-  // valida que el correo tenga formato de email y que la contraseña tenga al menos 12 caracteres
+  // Aplica al administrador la misma política que al registro profesional.
   if (
     !correo ||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo) ||
-    !contrasena ||
-    contrasena.length < 12
+    !validarContrasena(contrasena)
   ) {
-    throw new Error("Configura un ADMIN_EMAIL válido y un ADMIN_PASSWORD de al menos 12 caracteres");
+    throw new Error("Configura un ADMIN_EMAIL válido y un ADMIN_PASSWORD de al menos 12 caracteres y 72 bytes");
   }
 
   // busca un usuario con ese correo y fuerza la carga del hash de contraseña
@@ -50,19 +55,19 @@ export async function inicializarAdministrador() {
   console.log("Usuario administrador inicial creado");
 }
 
-// Evita que una sesión activa vuelva a la pantalla de acceso y la dirige al área
-// de turnos; para visitantes sin sesión renderiza el formulario independiente.
+// Evita que una cuenta autenticada vuelva a la pantalla de acceso y la dirige
+// al área de turnos; para visitantes renderiza el formulario independiente.
 export async function mostrarLogin(req, res) {
-  if (req.session.usuario) {
+  if (req.usuario) {
     return res.redirect("/turnos");
   }
   res.render("login", { layout: false });
 }
 
-// Si todavía no hay sesión, carga las opciones válidas para asociar al perfil
-// profesional y renderiza el formulario público de registro.
+// Si todavía no hay una cuenta autenticada, carga las opciones válidas para
+// asociar al perfil profesional y renderiza el formulario público de registro.
 export async function mostrarRegistro(req, res) {
-  if (req.session.usuario) {
+  if (req.usuario) {
     return res.redirect("/turnos");
   }
 
@@ -98,12 +103,10 @@ export async function registrarProfesional(req, res, next) {
     ) {
       return res.status(400).json({ mensaje: "Completa todos los datos del profesional correctamente" });
     }
-    if (
-      typeof contrasena !== "string" ||
-      contrasena.length < 8 ||
-      Buffer.byteLength(contrasena, "utf8") > 72
-    ) {
-      return res.status(400).json({ mensaje: "La contraseña debe tener entre 8 y 72 bytes" });
+    if (!validarContrasena(contrasena)) {
+      return res.status(400).json({
+        mensaje: "La contraseña debe tener al menos 12 caracteres y no superar 72 bytes"
+      });
     }
     if (contrasena !== confirmarContrasena) {
       return res.status(400).json({ mensaje: "Las contraseñas no coinciden" });
@@ -169,8 +172,8 @@ export async function registrarProfesional(req, res, next) {
 // explícitamente junto con la referencia profesional. Solo acepta hashes bcrypt
 // reconocibles, roles habilitados y perfiles profesionales existentes; ante
 // cualquier fallo devuelve el mismo error para no revelar qué dato no coincidió.
-// Tras autenticar, regenera la sesión para evitar fijación de sesión y guarda en
-// ella solo los datos necesarios para identificar rol y perfil.
+// Tras autenticar, firma un JWT de duración fija con la identidad y los permisos
+// mínimos y lo entrega en una cookie no accesible desde JavaScript.
 export async function iniciarSesion(req, res, next) {
   try {
     const cuerpo = req.body ?? {};
@@ -201,34 +204,45 @@ export async function iniciarSesion(req, res, next) {
       return res.status(401).json({ mensaje: "Correo o contraseña incorrectos, o usuario sin permisos" });
     }
 
-    // Las operaciones de sesión usan callbacks: cada error se entrega al
-    // middleware central y la respuesta de éxito espera a que la sesión se guarde.
-    req.session.regenerate(error => {
-      if (error) return next(error);
-      req.session.usuario = {
-        id: usuario._id.toString(),
+    const token = jwt.sign(
+      {
         correo_electronico: usuario.correo_electronico,
         rol: usuario.rol,
         ...(usuario.rol === "profesional"
           ? { profesionalId: usuario.profesional._id.toString() }
           : {})
-      };
-      req.session.save(saveError => {
-        if (saveError) return next(saveError);
-        res.json({ mensaje: "Sesión iniciada", redirect: "/turnos" });
-      });
+      },
+      process.env.JWT_SECRET,
+      {
+        algorithm: "HS256",
+        jwtid: randomUUID(),
+        subject: usuario._id.toString(),
+        expiresIn: "30m"
+      }
+    );
+    res.cookie(NOMBRE_COOKIE_JWT, token, {
+      ...OPCIONES_COOKIE_JWT,
+      maxAge: DURACION_JWT_MS
     });
+    res.json({ mensaje: "Sesión iniciada", redirect: "/turnos" });
   } catch (error) {
     next(error);
   }
 }
 
-// Invalida la sesión almacenada antes de borrar su cookie del navegador. Si la
-// destrucción falla, delega el error y no comunica un cierre exitoso prematuro.
-export function cerrarSesion(req, res, next) {
-  req.session.destroy(error => {
-    if (error) return next(error);
-    res.clearCookie("turnoflex.sid");
+// Revoca el token actual en MongoDB antes de eliminar su cookie para que una
+// copia previamente obtenida tampoco pueda volver a autenticarse.
+export async function cerrarSesion(req, res, next) {
+  try {
+    if (req.usuario?.jti && req.usuario.exp) {
+      await TokenRevocado.create({
+        jti: req.usuario.jti,
+        expira_en: new Date(req.usuario.exp * 1000)
+      });
+    }
+    res.clearCookie(NOMBRE_COOKIE_JWT, OPCIONES_COOKIE_JWT);
     res.json({ mensaje: "Sesión cerrada", redirect: "/login" });
-  });
+  } catch (error) {
+    next(error);
+  }
 }

@@ -30,4 +30,7 @@ const turnoSchema = new mongoose.Schema(
   { collection: "turnos", timestamps: true }
 );
 
+turnoSchema.index({ estado: 1, profesional: 1, fecha_hora_inicio: 1 });
+turnoSchema.index({ estado: 1, paciente: 1, fecha_hora_inicio: 1 });
+
 export default mongoose.model("Turno", turnoSchema);

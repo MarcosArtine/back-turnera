@@ -10,7 +10,18 @@ const usuarioSchema = new mongoose.Schema(
       lowercase: true,
       unique: true
     },
-    contrasena: { type: String, required: true, select: false },
+    contrasena: {
+      type: String,
+      required: true,
+      select: false,
+      validate: {
+        validator: value =>
+          typeof value === "string" &&
+          [...value].length >= 12 &&
+          Buffer.byteLength(value, "utf8") <= 72,
+        message: "La contraseña debe tener al menos 12 caracteres y no superar 72 bytes"
+      }
+    },
     rol: { type: String, required: true, enum: ["profesional", "admin"] },
     profesional: {
       type: mongoose.Schema.Types.ObjectId,

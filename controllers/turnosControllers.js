@@ -1,8 +1,20 @@
 import mongoose from "mongoose";
+import { randomUUID } from "node:crypto";
+import { formatInTimeZone } from "date-fns-tz";
+import BloqueoAgenda from "../models/bloqueoAgenda.js";
 import Especialidad from "../models/especialidad.js";
 import Paciente from "../models/paciente.js";
 import Profesional from "../models/profesional.js";
 import Turno from "../models/turno.js";
+import {
+  dentroHorarioLaboral,
+  fechaParaFormulario,
+  parsearFechaHoraLocal,
+  ZONA_HORARIA_AGENDA
+} from "../utils/agenda.js";
+
+const DURACION_BLOQUEO_MS = 2 * 60 * 1000;
+const ESPERA_MAXIMA_BLOQUEO_MS = 10 * 1000;
 
 // Comprueba el formato del ID antes de cualquier consulta. Al devolver null
 // después de responder 400, permite que el controlador termine sin continuar
@@ -16,72 +28,126 @@ function idDeRuta(req, res) {
   return id;
 }
 
-// Forma una fecha y hora local con precisión de minutos, que es el formato
-// requerido por `datetime-local` y no incluye sufijo de zona horaria.
-function formatearFechaLocal(fecha) {
-  const completar = valor => String(valor).padStart(2, "0");
-  return `${fecha.getFullYear()}-${completar(fecha.getMonth() + 1)}-${completar(fecha.getDate())}T${completar(fecha.getHours())}:${completar(fecha.getMinutes())}`;
+function clavesDeAgenda(turno) {
+  return [
+    `paciente:${turno.paciente.toString()}`,
+    `profesional:${turno.profesional.toString()}`
+  ];
 }
 
-// Convierte el valor guardado (que puede ser una fecha o una cadena) a Date y
-// centraliza el formato que se usa al precargar el formulario.
-function fechaParaFormulario(fecha) {
-  return formatearFechaLocal(new Date(fecha));
+async function adquirirBloqueosAgenda(claves) {
+  const titular = randomUUID();
+  const adquiridas = [];
+  const limite = Date.now() + ESPERA_MAXIMA_BLOQUEO_MS;
+
+  async function liberar() {
+    await Promise.all(adquiridas.map(clave =>
+      BloqueoAgenda.updateOne(
+        { _id: clave, titular },
+        { $set: { vence_en: new Date(0) } }
+      )
+    ));
+  }
+
+  for (const clave of [...new Set(claves)].sort()) {
+    let adquirida = false;
+    while (!adquirida) {
+      try {
+        const bloqueo = await BloqueoAgenda.findOneAndUpdate(
+          { _id: clave, vence_en: { $lte: new Date() } },
+          {
+            $set: {
+              titular,
+              vence_en: new Date(Date.now() + DURACION_BLOQUEO_MS)
+            }
+          },
+          { new: true, upsert: true }
+        );
+        adquirida = Boolean(bloqueo);
+      } catch (error) {
+        if (error.code !== 11000) {
+          await liberar();
+          throw error;
+        }
+      }
+
+      if (adquirida) {
+        adquiridas.push(clave);
+      } else if (Date.now() >= limite) {
+        await liberar();
+        return null;
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    }
+  }
+
+  return liberar;
+}
+
+async function existeSuperposicion(datos, excluirId) {
+  return Turno.exists({
+    estado: "Reservado",
+    fecha_hora_inicio: { $lt: datos.fecha_hora_fin },
+    fecha_hora_fin: { $gt: datos.fecha_hora_inicio },
+    $or: [
+      { profesional: datos.profesional },
+      { paciente: datos.paciente }
+    ],
+    ...(excluirId ? { _id: { $ne: excluirId } } : {})
+  });
 }
 
 // Los profesionales solo consultan turnos asociados a su propio perfil, usando
-// el ID validado que quedó en sesión. El administrador obtiene un filtro vacío
+// el ID validado que quedó en el JWT. El administrador obtiene un filtro vacío
 // y por ello puede acceder a la colección completa.
 function filtroTurnos(req) {
-  return req.session.usuario.rol === "profesional"
-    ? { profesional: req.session.usuario.profesionalId }
+  return req.usuario.rol === "profesional"
+    ? { profesional: req.usuario.profesionalId }
     : {};
 }
 
-// Normaliza las referencias recibidas, valida que estén completas y con formato
-// correcto y confirma que paciente y especialidad existan. Busca el primer
-// profesional asociado a esa especialidad, valida la fecha y calcula el fin a
-// partir de la duración configurada en la especialidad. Devuelve un objeto de
-// error en vez de datos si alguna regla de negocio no se cumple.
+// Normaliza las referencias, valida que el profesional corresponda a la
+// especialidad seleccionada y calcula el intervalo en la zona horaria del centro.
+// Devuelve un error de validación en vez de datos cuando falta una regla.
 async function obtenerDatosTurno(body) {
   const pacienteId = String(body.paciente ?? "").trim();
   const especialidadId = String(body.especialidad ?? "").trim();
+  const profesionalId = String(body.profesional ?? "").trim();
   const fechaInicio = body.fecha_hora_inicio ?? body.fechaHora;
 
-  if (!pacienteId || !especialidadId || !fechaInicio) {
-    return { error: "Faltan datos requeridos para el turno" };
+  if (!pacienteId || !especialidadId || !profesionalId || typeof fechaInicio !== "string") {
+    return { error: "Selecciona paciente, especialidad, profesional y fecha para el turno" };
   }
   if (
     !mongoose.isObjectIdOrHexString(pacienteId) ||
-    !mongoose.isObjectIdOrHexString(especialidadId)
+    !mongoose.isObjectIdOrHexString(especialidadId) ||
+    !mongoose.isObjectIdOrHexString(profesionalId)
   ) {
-    return { error: "El paciente o la especialidad seleccionados no son válidos" };
+    return { error: "El paciente, la especialidad o el profesional seleccionados no son válidos" };
   }
 
-  // Estas lecturas son independientes: ejecutarlas en paralelo reduce la espera
-  // sin cambiar el resultado de las validaciones.
-  const [paciente, especialidad] = await Promise.all([
+  const [paciente, especialidad, profesional] = await Promise.all([
     Paciente.findById(pacienteId),
-    Especialidad.findById(especialidadId)
+    Especialidad.findById(especialidadId),
+    Profesional.findOne({ _id: profesionalId, especialidad: especialidadId })
   ]);
   if (!paciente) return { error: "Paciente no encontrado" };
   if (!especialidad) return { error: "Especialidad no encontrada" };
-
-  // Selecciona de forma determinista el primer profesional de la especialidad
-  // (orden de ObjectId) porque el formulario solo solicita la especialidad.
-  const profesional = await Profesional.findOne({
-    especialidad: especialidad._id
-  }).sort({ _id: 1 });
   if (!profesional) {
-    return { error: "No hay un profesional para esa especialidad" };
+    return { error: "El profesional seleccionado no pertenece a esa especialidad" };
   }
 
-  const inicio = new Date(fechaInicio);
-  if (!Number.isFinite(inicio.getTime())) {
+  const inicio = parsearFechaHoraLocal(fechaInicio);
+  if (!inicio) {
     return { error: "La fecha y hora de inicio no son válidas" };
   }
 
   const fin = new Date(inicio.getTime() + especialidad.duracion_turno_default * 60_000);
+  if (!dentroHorarioLaboral(inicio, fin)) {
+    return { error: "Los turnos deben ser de lunes a viernes y finalizar antes de las 17:00 (hora de Buenos Aires)" };
+  }
+
   return {
     paciente,
     profesional,
@@ -108,20 +174,31 @@ function datosTurno(datos, estado = "Reservado") {
 // filtrados por rol y con referencias pobladas; las listas para crear/editar
 // turnos solo se consultan para administradores, ya que el profesional no las usa.
 async function renderizarListaTurnos(req, res, opciones = {}) {
-  const esProfesional = req.session.usuario.rol === "profesional";
-  const [turnos, pacientes, especialidades] = await Promise.all([
+  const esProfesional = req.usuario.rol === "profesional";
+  const [turnos, pacientes, especialidades, profesionales] = await Promise.all([
     Turno.find(filtroTurnos(req))
       .populate("paciente", "nombre apellido")
       .populate("profesional", "nombre apellido")
       .populate("especialidad", "nombre_especialidad")
       .sort({ fecha_hora_inicio: 1 }),
     esProfesional ? [] : Paciente.find().sort({ apellido: 1, nombre: 1 }),
-    esProfesional ? [] : Especialidad.find().sort({ nombre_especialidad: 1 })
+    esProfesional ? [] : Especialidad.find().sort({ nombre_especialidad: 1 }),
+    esProfesional
+      ? []
+      : Profesional.find()
+        .populate("especialidad", "nombre_especialidad")
+        .sort({ apellido: 1, nombre: 1 })
   ]);
   return res.render("listTurnos", {
     turnos,
     pacientes,
     especialidades,
+    profesionales,
+    formatearFecha: fecha => formatInTimeZone(
+      new Date(fecha),
+      ZONA_HORARIA_AGENDA,
+      "dd/MM/yyyy HH:mm"
+    ),
     esProfesional,
     turno: null,
     mostrarFormulario: false,
@@ -163,12 +240,25 @@ export async function agregarTurno(req, res) {
   if ("error" in datos) {
     return res.status(400).json({ mensaje: datos.error });
   }
-  // el estado inicial es "Reservado" y no se permite que el cliente lo cambie
-  const turno = await Turno.create(datosTurno(datos));
-  if (req.headers.accept?.includes("text/html")) {
-    return res.redirect("/turnos");
+  const nuevoTurno = datosTurno(datos);
+  const liberar = await adquirirBloqueosAgenda(clavesDeAgenda(nuevoTurno));
+  if (!liberar) {
+    return res.status(503).json({ mensaje: "La agenda está ocupada. Intenta nuevamente." });
   }
-  res.status(201).json({ mensaje: "Turno agregado con éxito", turno });
+  try {
+    if (await existeSuperposicion(nuevoTurno)) {
+      return res.status(409).json({
+        mensaje: "El paciente o el profesional ya tiene un turno reservado en ese horario"
+      });
+    }
+    const turno = await Turno.create(nuevoTurno);
+    if (req.headers.accept?.includes("text/html")) {
+      return res.redirect("/turnos");
+    }
+    return res.status(201).json({ mensaje: "Turno agregado con éxito", turno });
+  } finally {
+    await liberar();
+  }
 }
 
 // Verifica primero que el turno exista y luego valida los nuevos datos. Se
@@ -178,26 +268,60 @@ export async function actualizarTurno(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
 
-  const turnoExistente = await Turno.findById(id);
-  if (!turnoExistente) {
-    return res.status(404).json({ mensaje: "Turno no encontrado" });
-  }
-
   const datos = await obtenerDatosTurno(req.body);
   if ("error" in datos) {
     return res.status(400).json({ mensaje: datos.error });
   }
 
-  const turno = await Turno.findByIdAndUpdate(
-    id,
-    { $set: datosTurno(datos, turnoExistente.estado) },
-    { new: true, runValidators: true }
-  );
+  for (let intento = 0; intento < 3; intento++) {
+    const turnoExistente = await Turno.findById(id);
+    if (!turnoExistente) {
+      return res.status(404).json({ mensaje: "Turno no encontrado" });
+    }
 
-  if (req.method === "POST" || req.headers.accept?.includes("text/html")) {
-    return res.redirect("/turnos");
+    const turnoActualizado = datosTurno(datos, turnoExistente.estado);
+    const claves = [...clavesDeAgenda(turnoExistente), ...clavesDeAgenda(turnoActualizado)];
+    const liberar = await adquirirBloqueosAgenda(claves);
+    if (!liberar) {
+      return res.status(503).json({ mensaje: "La agenda está ocupada. Intenta nuevamente." });
+    }
+
+    try {
+      const actual = await Turno.findById(id);
+      if (!actual) {
+        return res.status(404).json({ mensaje: "Turno no encontrado" });
+      }
+      const clavesActuales = clavesDeAgenda(actual);
+      if (!clavesActuales.every(clave => claves.includes(clave))) {
+        continue;
+      }
+
+      const datosActualizados = datosTurno(datos, actual.estado);
+      if (
+        datosActualizados.estado === "Reservado" &&
+        await existeSuperposicion(datosActualizados, id)
+      ) {
+        return res.status(409).json({
+          mensaje: "El paciente o el profesional ya tiene un turno reservado en ese horario"
+        });
+      }
+
+      const turno = await Turno.findByIdAndUpdate(
+        id,
+        { $set: datosActualizados },
+        { new: true, runValidators: true }
+      );
+      if (req.method === "POST" || req.headers.accept?.includes("text/html")) {
+        return res.redirect("/turnos");
+      }
+      return res.json({ mensaje: "Turno actualizado con éxito", turno });
+    } finally {
+      await liberar();
+    }
   }
-  res.json({ mensaje: "Turno actualizado con éxito", turno });
+  return res.status(503).json({
+    mensaje: "El turno cambió mientras se editaba. Vuelve a intentarlo."
+  });
 }
 
 // Usa el mismo cargador de página que el listado, activando el modo de alta para
@@ -228,6 +352,7 @@ export async function mostrarFormularioEdicion(req, res) {
   const valoresTurno = turno.toObject();
   valoresTurno.fecha_hora_inicio = fechaParaFormulario(turno.fecha_hora_inicio);
   valoresTurno.pacienteId = turno.paciente._id.toString();
+  valoresTurno.profesionalId = turno.profesional._id.toString();
   valoresTurno.especialidadId = turno.especialidad._id.toString();
   return renderizarListaTurnos(req, res, {
     turno: valoresTurno,
@@ -242,13 +367,35 @@ export async function eliminarTurno(req, res) {
   const id = idDeRuta(req, res);
   if (id === null) return;
 
-  const turno = await Turno.findByIdAndDelete(id);
-  if (!turno) {
-    return res.status(404).json({ mensaje: "Turno no encontrado" });
-  }
+  for (let intento = 0; intento < 3; intento++) {
+    const existente = await Turno.findById(id);
+    if (!existente) {
+      return res.status(404).json({ mensaje: "Turno no encontrado" });
+    }
+    const claves = clavesDeAgenda(existente);
+    const liberar = await adquirirBloqueosAgenda(claves);
+    if (!liberar) {
+      return res.status(503).json({ mensaje: "La agenda está ocupada. Intenta nuevamente." });
+    }
 
-  if (req.method === "POST" || req.headers.accept?.includes("text/html")) {
-    return res.redirect("/turnos");
+    try {
+      const actual = await Turno.findById(id);
+      if (!actual) {
+        return res.status(404).json({ mensaje: "Turno no encontrado" });
+      }
+      if (!clavesDeAgenda(actual).every(clave => claves.includes(clave))) {
+        continue;
+      }
+      await Turno.findByIdAndDelete(id);
+      if (req.method === "POST" || req.headers.accept?.includes("text/html")) {
+        return res.redirect("/turnos");
+      }
+      return res.json({ mensaje: "Turno eliminado con éxito" });
+    } finally {
+      await liberar();
+    }
   }
-  res.json({ mensaje: "Turno eliminado con éxito" });
+  return res.status(503).json({
+    mensaje: "El turno cambió mientras se eliminaba. Vuelve a intentarlo."
+  });
 }

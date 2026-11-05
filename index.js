@@ -1,10 +1,13 @@
 import express from "express";
 import "dotenv/config";
 import mongoose from "mongoose";
-import session from "express-session";
-import MongoStore from "connect-mongo";
+import cookieParser from "cookie-parser";
 import { conectarDB } from "./config/db.js";
-import { requiereAdministrador, requiereAutenticacion } from "./middleware/autenticacion.js";
+import {
+  cargarUsuarioDesdeJwt,
+  requiereAdministrador,
+  requiereAutenticacion
+} from "./middleware/autenticacion.js";
 import { inicializarAdministrador } from "./controllers/usuariosControllers.js";
 import especialidadesRoutes from "./routes/especialidadesRoutes.js";
 import pacientesRoutes from "./routes/pacientesRoutes.js";
@@ -22,51 +25,26 @@ const PORT = process.env.PORT ?? 3000;
 // y Express puede servir recursos estáticos y renderizar vistas Pug.
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(express.static("public"));
 app.set("view engine", "pug");
 app.set("views", "./views");
 
-// La clave de sesión debe tener suficiente longitud para proteger las cookies
-// firmadas. La URI de MongoDB también es obligatoria porque se usa tanto para
-// la aplicación como para almacenar las sesiones; fallar aquí evita arrancar
-// con una configuración incompleta.
-if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
-  throw new Error("Configura SESSION_SECRET con al menos 32 caracteres en .env");
+// El secreto JWT debe tener suficiente entropía; MongoDB continúa siendo
+// obligatorio para los datos de la aplicación.
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  throw new Error("Configura JWT_SECRET con al menos 32 caracteres aleatorios en .env");
 }
 if (!process.env.MONGO_URI) {
   throw new Error("Falta configurar MONGO_URI en .env");
 }
 
-// Configura sesiones persistentes en MongoDB. La sesión se guarda en una
-// colección separada y vence tras ocho horas; `rolling` renueva ese plazo con
-// cada solicitud. `resave` y `saveUninitialized` evitan escrituras innecesarias
-// y no crean sesiones para visitantes que todavía no tienen datos de sesión.
-app.use(session({
-  name: "turnoflex.sid",
-  secret: process.env.SESSION_SECRET,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI,
-    collectionName: "sessions",
-    ttl: 8 * 60 * 60
-  }),
-  resave: false,
-  saveUninitialized: false,
-  rolling: true,
-  cookie: {
-    // El navegador no permite leer la cookie desde JavaScript; `sameSite`
-    // restringe su envío en solicitudes de otros sitios y `secure` exige HTTPS
-    // en producción. En desarrollo permite probar por HTTP local.
-    httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 8 * 60 * 60 * 1000
-  }
-}));
-
 // Las rutas de usuarios se montan antes de exigir autenticación para permitir
-// iniciar sesión y registrarse. A partir de este punto, el middleware detiene
-// solicitudes sin una sesión válida antes de que lleguen a las rutas protegidas.
+// iniciar sesión y registrarse. Se carga opcionalmente la identidad JWT para
+// que una persona autenticada no vuelva a las pantallas públicas de acceso.
+app.use(cargarUsuarioDesdeJwt);
 app.use(usuariosRoutes);
+// A partir de este punto, las rutas protegidas requieren un JWT válido.
 app.use(requiereAutenticacion);
 
 // La raíz lleva al listado de turnos. Ese recurso está disponible para

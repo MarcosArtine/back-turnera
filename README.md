@@ -114,6 +114,12 @@ npm install
 npm start
 ```
 
+4. Ejecutar las pruebas automatizadas:
+```bash
+npm test
+```
+Las pruebas verifican la política de contraseñas y la conversión de fechas, la zona horaria y el horario laboral de la agenda.
+
 El servidor quedará disponible en `http://localhost:3000` (configurable mediante la variable de entorno `PORT`).
 Antes de registrar profesionales o crear turnos, crea al menos una especialidad desde `/especialidades`.
 El administrador se crea automáticamente al iniciar la aplicación si todavía no existe; sus credenciales se leen de las variables `ADMIN_EMAIL` y `ADMIN_PASSWORD`, y la contraseña se almacena con hash bcrypt. Si ya existe, la contraseña configurada se usa para actualizarla cuando no coincide con la almacenada.
@@ -199,7 +205,7 @@ El limitador usa memoria local al proceso. Es suficiente para una instancia úni
 ### Usuarios
 - `GET /registro` y `POST /registro` — Alta pública de un profesional con su ficha y cuenta.
 - `GET /login` y `POST /login` — Inicio de sesión para administradores y profesionales; si es válido, `POST /login` establece la cookie JWT.
-- `POST /logout` — Elimina la cookie JWT del navegador.
+- `POST /logout` — Revoca en MongoDB el JWT actual y elimina su cookie del navegador.
 ---
 
 ## Códigos de estado HTTP utilizados

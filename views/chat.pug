@@ -1,0 +1,28 @@
+extends layout
+
+block content
+  main.chat-page(data-mi-usuario-id=usuario.id)
+    h2 Chat
+
+    label(for='chat-destinatario') Conversar con
+    select#chat-destinatario
+      option(value='') Seleccioná un usuario
+      each contacto in contactos
+        option(value=contacto._id) #{contacto.correo_electronico} (#{contacto.rol})
+
+    p#chat-estado(role='status' aria-live='polite') Conectando...
+
+    ol#chat-mensajes(aria-live='polite' aria-relevant='additions')
+
+    form#chat-form
+      label(for='chat-contenido') Mensaje
+      textarea#chat-contenido(
+        name='contenido'
+        maxlength='2000'
+        rows='3'
+        required
+      )
+      button#chat-enviar(type='submit') Enviar
+
+  script(src='/socket.io/socket.io.js')
+  script(src='/scripts/chat.js')

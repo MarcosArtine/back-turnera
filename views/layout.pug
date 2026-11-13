@@ -12,6 +12,7 @@ html(lang='es')
       h1 TurnoFlex
       nav
         ul
+          li: a(href='/mensajes') Chat
           li: a(href='/turnos')= usuario && usuario.rol === 'profesional' ? 'Mis Turnos' : 'Lista de Turnos'
           if usuario && usuario.rol === 'admin'
             li: a(href='/pacientes') Lista de Pacientes

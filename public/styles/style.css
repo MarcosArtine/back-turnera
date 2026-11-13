@@ -483,3 +483,59 @@ header h1::before {
     max-width: none;
   }
 }
+
+textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  color: inherit;
+  background: #fff;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: var(--color-primario);
+  box-shadow: 0 0 0 3px var(--color-primario-suave);
+}
+
+.chat-page {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+#chat-mensajes {
+  list-style: none;
+  max-height: 50vh;
+  overflow-y: auto;
+  margin: 16px 0;
+  padding: 12px;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+}
+
+.chat-mensaje {
+  max-width: 80%;
+  margin: 8px 0;
+  padding: 10px 12px;
+  background: var(--color-fondo);
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+
+.chat-mensaje-propio {
+  margin-left: auto;
+  background: var(--color-primario-suave);
+}
+
+.chat-mensaje p {
+  margin: 4px 0;
+}
+
+.chat-mensaje time {
+  color: var(--color-texto-suave);
+  font-size: 0.8rem;
+}

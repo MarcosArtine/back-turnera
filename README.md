@@ -222,3 +222,7 @@ El limitador usa memoria local al proceso. Es suficiente para una instancia úni
 - **204 No Content** — Eliminación exitosa de una especialidad sin contenido de respuesta.
 
 ---
+
+## ChatBot Gemini
+Si no responde comprobar que error da con:
+node probar-gemini.mjs

@@ -9,6 +9,7 @@ import {
   requiereAutenticacion
 } from "./middleware/autenticacion.js";
 import { inicializarAdministrador } from "./controllers/usuariosControllers.js";
+import chatRoutes from "./routes/chatRoutes.js";
 import especialidadesRoutes from "./routes/especialidadesRoutes.js";
 import pacientesRoutes from "./routes/pacientesRoutes.js";
 import profesionalesRoutes from "./routes/profesionalesRoutes.js";
@@ -52,6 +53,9 @@ app.use(requiereAutenticacion);
 // después y protege únicamente las secciones administrativas siguientes.
 app.get("/", (_req, res) => res.redirect("/turnos"));
 app.use("/turnos", turnosRoutes);
+// El asistente virtual (Gemini) está disponible para cualquier usuario autenticado,
+// por eso se monta antes del middleware de administrador.
+app.use("/api/chat", chatRoutes);
 app.use(requiereAdministrador);
 app.use("/pacientes", pacientesRoutes);
 app.use("/profesionales", profesionalesRoutes);

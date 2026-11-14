@@ -304,6 +304,22 @@ td:first-child {
   white-space: nowrap;
 }
 
+table.especialidades th:first-child,
+table.especialidades td:first-child {
+  width: 20%;
+  max-width: none;
+}
+
+table.especialidades td:first-child {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* Los botones de acciones, uno al lado del otro y más compactos. La vista pone
    un "|" como texto entre ellos: con font-size 0 en la celda se oculta, y cada
    botón vuelve a definir su propio tamaño. */

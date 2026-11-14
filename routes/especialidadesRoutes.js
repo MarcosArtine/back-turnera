@@ -19,6 +19,7 @@ router.get("/:id/editar", mostrarFormularioEditar);
 router.get("/:id", obtenerEspecialidadPorId);
 router.post("/", crearEspecialidad);
 router.put("/:id", actualizarEspecialidad);
+router.post("/:id", actualizarEspecialidad);
 router.post("/:id/editar", actualizarEspecialidad);
 router.delete("/:id/eliminar", eliminarEspecialidad);
 router.post("/:id/eliminar", eliminarEspecialidad);

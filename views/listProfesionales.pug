@@ -3,7 +3,7 @@ block content
   h2 Lista de Profesionales
   if mostrarFormulario
     h3= editando ? 'Editar Profesional' : 'Nuevo Profesional'
-    form(method="POST", action=editando ? `/profesionales/${profesional._id}/editar` : "/profesionales", data-fetch-method=editando ? "PUT" : null)
+    form(method="POST", action=editando ? `/profesionales/${profesional._id}` : "/profesionales", data-fetch-method=editando ? "PUT" : null)
       div
         label(for="nombre") Nombre:
         input(type="text", id="nombre", name="nombre", value=profesional ? profesional.nombre : '', required)

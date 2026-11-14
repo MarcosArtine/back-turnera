@@ -3,7 +3,7 @@ block content
   h2 Lista de Turnos
   if mostrarFormulario
     h3= editando ? 'Editar Turno' : 'Nuevo Turno'
-    form(method="POST", action=editando ? `/turnos/${turno._id}/editar` : "/turnos", data-fetch-method=editando ? "PUT" : null)
+    form(method="POST", action=editando ? `/turnos/${turno._id}` : "/turnos", data-fetch-method=editando ? "PUT" : null)
       div
         label(for="paciente") Paciente:
         select(id="paciente", name="paciente", required)

@@ -19,6 +19,7 @@ router.get("/:id/editar", mostrarFormularioEdicion);
 router.get("/:id", obtenerPacientePorId);
 router.post("/", agregarPaciente);
 router.put("/:id", editarPaciente);
+router.post("/:id", editarPaciente);
 router.post("/:id/editar", editarPaciente);
 router.delete("/:id/eliminar", eliminarPaciente);
 router.post("/:id/eliminar", eliminarPaciente);

@@ -3,7 +3,7 @@ block content
   h2 Lista de Pacientes
   if mostrarFormulario
     h3= editando ? 'Editar Paciente' : 'Nuevo Paciente'
-    form(method="POST", action=editando ? `/pacientes/${paciente._id}/editar` : "/pacientes", data-fetch-method=editando ? "PUT" : null)
+    form(method="POST", action=editando ? `/pacientes/${paciente._id}` : "/pacientes", data-fetch-method=editando ? "PUT" : null)
       div
         label(for="nombre") Nombre:
         input(type="text", id="nombre", name="nombre", value=paciente ? paciente.nombre : '', required)

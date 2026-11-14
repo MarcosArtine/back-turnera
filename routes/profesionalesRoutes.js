@@ -19,6 +19,7 @@ router.get("/:id/editar", mostrarFormularioEdicion);
 router.get("/:id", obtenerProfesionalPorId);
 router.post("/", agregarProfesional);
 router.put("/:id", actualizarProfesional);
+router.post("/:id", actualizarProfesional);
 router.post("/:id/editar", actualizarProfesional);
 router.delete("/:id/eliminar", eliminarProfesional);
 router.post("/:id/eliminar", eliminarProfesional);

@@ -3,7 +3,7 @@ block content
   h2 Lista de Especialidades
   if mostrarFormulario
     h3= editando ? 'Editar Especialidad' : 'Nueva Especialidad'
-    form(method="POST", action=editando ? `/especialidades/${especialidad._id}/editar` : "/especialidades", data-fetch-method=editando ? "PUT" : null)
+    form(method="POST", action=editando ? `/especialidades/${especialidad._id}` : "/especialidades", data-fetch-method=editando ? "PUT" : null)
       div
         label(for="nombre_especialidad") Nombre:
         input(type="text", id="nombre_especialidad", name="nombre_especialidad", value=especialidad ? especialidad.nombre_especialidad : '', required)

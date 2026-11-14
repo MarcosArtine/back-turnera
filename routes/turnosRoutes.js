@@ -21,6 +21,7 @@ router.get("/:id/editar", requiereAdministrador, mostrarFormularioEdicion);
 router.get("/:id", obtenerTurnoPorId);
 router.post("/", requiereAdministrador, agregarTurno);
 router.put("/:id", requiereAdministrador, actualizarTurno);
+router.post("/:id", requiereAdministrador, actualizarTurno);
 router.post("/:id/editar", requiereAdministrador, actualizarTurno); // Ruta para redirigir a la página principal cuando se edita un turno desde la vista
 router.delete("/:id/eliminar", requiereAdministrador, eliminarTurno);
 

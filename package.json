@@ -7,7 +7,8 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "node --watch index.js",
+    "start": "node server.js",
+    "dev": "node --watch server.js",
     "test": "node --test"
   },
   "dependencies": {
@@ -19,7 +20,6 @@
     "express-rate-limit": "^8.7.3",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.10.4",
-    "pug": "^3.0.4",
-    "socket.io": "^4.8.4"
+    "pug": "^3.0.4"
   }
 }

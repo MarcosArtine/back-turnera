@@ -9,10 +9,11 @@ if (chat) {
   const botonEnviar = document.getElementById("chat-enviar");
   const estado = document.getElementById("chat-estado");
 
-  const socket = io();
   const mensajes = new Map();
   let usuarioSeleccionado = "";
   let solicitudHistorial = 0;
+  let ultimoMensajeId = "";
+  let consultaEnCurso = false;
 
   function esConversacionActual(mensaje) {
     const remitenteId = String(mensaje.remitente);
@@ -95,8 +96,11 @@ if (chat) {
         mensajes.set(String(mensaje._id), mensaje);
       }
 
+      ultimoMensajeId = resultado.length
+        ? String(resultado[resultado.length - 1]._id)
+        : "";
       renderizarMensajes();
-      estado.textContent = "Conversación cargada.";
+      estado.textContent = "Conversación cargada. Los mensajes nuevos se actualizan automáticamente.";
     } catch (error) {
       if (solicitudActual === solicitudHistorial) {
         estado.textContent = error.message;
@@ -106,19 +110,43 @@ if (chat) {
 
   destinatario.addEventListener("change", cargarHistorial);
 
-  socket.on("connect", () => {
-    estado.textContent = usuarioSeleccionado
-      ? "Conectado."
-      : "Conectado. Seleccioná un usuario.";
-  });
+  async function consultarMensajesNuevos() {
+    if (!usuarioSeleccionado || consultaEnCurso) return;
 
-  socket.on("connect_error", error => {
-    estado.textContent = error.message || "No se pudo conectar al chat.";
-  });
+    const solicitudActual = solicitudHistorial;
+    consultaEnCurso = true;
 
-  socket.on("mensaje:nuevo", agregarMensaje);
+    try {
+      const cursor = ultimoMensajeId
+        ? `?desde=${encodeURIComponent(ultimoMensajeId)}`
+        : "";
+      const response = await fetch(
+        `/mensajes/${encodeURIComponent(usuarioSeleccionado)}${cursor}`,
+        { headers: { Accept: "application/json" } }
+      );
+      const resultado = await response.json();
 
-  formulario.addEventListener("submit", event => {
+      if (!response.ok) {
+        throw new Error(resultado.mensaje || "No se pudieron actualizar los mensajes");
+      }
+      if (solicitudActual !== solicitudHistorial) return;
+
+      for (const mensaje of resultado) {
+        agregarMensaje(mensaje);
+        ultimoMensajeId = String(mensaje._id);
+      }
+    } catch (error) {
+      if (solicitudActual === solicitudHistorial) {
+        estado.textContent = error.message;
+      }
+    } finally {
+      consultaEnCurso = false;
+    }
+  }
+
+  window.setInterval(consultarMensajesNuevos, 3000);
+
+  formulario.addEventListener("submit", async event => {
     event.preventDefault();
 
     const destinatarioId = destinatario.value;
@@ -136,34 +164,34 @@ if (chat) {
       return;
     }
 
-    if (!socket.connected) {
-      estado.textContent = "No hay conexión con el chat.";
-      return;
-    }
-
     botonEnviar.disabled = true;
+    const solicitudActual = solicitudHistorial;
 
-    socket.timeout(5000).emit(
-      "mensaje:enviar",
-      { destinatarioId, contenido },
-      (error, respuesta) => {
-        botonEnviar.disabled = false;
+    try {
+      const response = await fetch("/mensajes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify({ destinatarioId, contenido })
+      });
+      const respuesta = await response.json();
 
-        if (error) {
-          estado.textContent =
-            "No llegó la confirmación. Revisá la conversación antes de reenviar.";
-          return;
-        }
-
-        if (!respuesta?.ok) {
-          estado.textContent = respuesta?.mensaje || "No se pudo enviar el mensaje.";
-          return;
-        }
-
-        campoContenido.value = "";
-        campoContenido.focus();
-        estado.textContent = "Mensaje enviado.";
+      if (!response.ok) {
+        throw new Error(respuesta.mensaje || "No se pudo enviar el mensaje.");
       }
-    );
+      if (solicitudActual !== solicitudHistorial) return;
+
+      agregarMensaje(respuesta);
+      ultimoMensajeId = String(respuesta._id);
+      campoContenido.value = "";
+      campoContenido.focus();
+      estado.textContent = "Mensaje enviado.";
+    } catch (error) {
+      estado.textContent = error.message || "No se pudo enviar el mensaje.";
+    } finally {
+      botonEnviar.disabled = false;
+    }
   });
 }

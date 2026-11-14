@@ -6,12 +6,8 @@ import { conectarDB } from "./config/db.js";
 import {
   cargarUsuarioDesdeJwt,
   requiereAdministrador,
-  requiereAutenticacion,
-  verificarTokenJwt,
-  NOMBRE_COOKIE_JWT
+  requiereAutenticacion
 } from "./middleware/autenticacion.js";
-import { createServer } from "node:http";
-import { Server } from "socket.io";
 import { inicializarAdministrador } from "./controllers/usuariosControllers.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import especialidadesRoutes from "./routes/especialidadesRoutes.js";
@@ -20,12 +16,9 @@ import profesionalesRoutes from "./routes/profesionalesRoutes.js";
 import turnosRoutes from "./routes/turnosRoutes.js";
 import usuariosRoutes from "./routes/usuariosRoutes.js";
 import mensajesRoutes from "./routes/mensajesRoutes.js";
-import { registrarEventosMensajes } from "./controllers/mensajesControllers.js";
 
-// Crea la instancia principal de Express. El puerto puede venir del entorno
-// (por ejemplo, en producción) y usa 3000 como valor local predeterminado.
 const app = express();
-const PORT = process.env.PORT ?? 3000;
+let inicializacion;
 
 // Registra middleware de entrada y presentación antes de declarar las rutas:
 // así cada controlador puede recibir cuerpos JSON o formularios ya interpretados,
@@ -45,6 +38,29 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
 if (!process.env.MONGO_URI) {
   throw new Error("Falta configurar MONGO_URI en .env");
 }
+
+async function prepararAplicacion() {
+  if (!inicializacion) {
+    inicializacion = (async () => {
+      await conectarDB();
+      await inicializarAdministrador();
+    })().catch(error => {
+      inicializacion = undefined;
+      throw error;
+    });
+  }
+
+  await inicializacion;
+}
+
+app.use(async (_req, _res, next) => {
+  try {
+    await prepararAplicacion();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Las rutas de usuarios se montan antes de exigir autenticación para permitir
 // iniciar sesión y registrarse. Se carga opcionalmente la identidad JWT para
@@ -90,54 +106,4 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ mensaje: "Error interno del servidor" });
 });
 
-// Crea un servidor HTTP y un servidor de WebSocket (Socket.IO) para permitir
-// la comunicación en tiempo real con los clientes. Esto es útil para notificar
-// cambios de estado, como la creación de un nuevo turno, sin que el cliente
-// tenga que refrescar la página.
-const httpServer = createServer(app);
-const io = new Server(httpServer);
-
-// El middleware de Socket.IO valida la sesión del usuario a partir del token JWT
-// presente en la cookie. Si el token es válido, se publica la identidad del
-// usuario en `socket.data.usuario` para que los controladores de eventos puedan
-// acceder a ella.
-io.use(async (socket, next) => {
-  const cookieHeader = socket.handshake.headers.cookie ?? "";
-  const cookie = cookieHeader
-    .split(";")
-    .map(parte => parte.trim())
-    .find(parte => parte.startsWith(`${NOMBRE_COOKIE_JWT}=`));
-
-  const token = cookie?.slice(NOMBRE_COOKIE_JWT.length + 1);
-
-  try {
-    const usuario = await verificarTokenJwt(token);
-
-    if (!usuario) {
-      return next(new Error("No autenticado"));
-    }
-
-    socket.data.usuario = usuario;
-    return next();
-  } catch (error) {
-    console.error("Error validando sesión de WebSocket:", error);
-    return next(new Error("No se pudo validar la sesión"));
-  }
-});
-
-// Registra los eventos de mensajes para permitir que los usuarios envíen y reciban
-// mensajes en tiempo real. Cada usuario se une a una sala propia para recibir
-// notificaciones de nuevos mensajes dirigidos a él.
-registrarEventosMensajes(io);
-
-// La inicialización es secuencial: primero se establece la conexión con la base
-// de datos y luego se crea el administrador inicial si hace falta. El `await`
-// impide que el servidor acepte solicitudes antes de completar ambos pasos.
-await conectarDB();
-await inicializarAdministrador();
-
-// El servidor HTTP escucha en el puerto configurado y registra un mensaje en la
-// consola para indicar que está listo para recibir solicitudes.
-httpServer.listen(PORT, () => {
-   console.log(`Servidor de node escuchando en http://localhost:${PORT}`);
- });
+export default app;

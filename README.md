@@ -111,7 +111,7 @@ npm install
 
 3. Iniciar el servidor en modo desarrollo:
 ```bash
-npm start
+npm run dev
 ```
 
 4. Ejecutar las pruebas automatizadas:
@@ -126,6 +126,17 @@ El administrador se crea automáticamente al iniciar la aplicación si todavía 
 Los profesionales pueden registrarse desde `/registro`; el registro crea tanto su perfil como su cuenta vinculada. Una vez autenticados, pueden consultar solo sus propios turnos. La administración de pacientes, profesionales, especialidades y las operaciones de escritura de turnos está reservada al administrador. La autenticación se realiza mediante un JWT que vence a los 30 minutos.
 
 Los formularios realizan sus solicitudes mediante `fetch` desde `public/scripts/script.js`. El navegador envía y recibe JSON para las operaciones de formulario; los endpoints también pueden consultarse con clientes como Postman o Thunder Client.
+
+## Despliegue en Vercel
+
+La aplicación exporta Express desde `index.js`, por lo que Vercel puede detectarla como una función Node.js sin un `vercel.json` ni un comando de inicio. El archivo `server.js` se usa para la ejecución local; `npm start` inicia ese servidor y `npm run dev` lo inicia con recarga automática.
+
+1. Subir el repositorio a GitHub e importarlo desde Vercel como un proyecto Node.js.
+2. En **Settings → Environment Variables**, configurar `MONGO_URI`, `JWT_SECRET`, `ADMIN_EMAIL` y `ADMIN_PASSWORD`. `JWT_SECRET` debe tener al menos 32 caracteres aleatorios; la contraseña de administrador debe tener entre 12 y 72 bytes UTF-8. Agregar `GEMINI_API_KEY` si se va a usar el asistente. No subir `.env` al repositorio.
+3. En MongoDB Atlas, permitir el acceso de red desde el despliegue de Vercel y utilizar un usuario de base de datos con una contraseña segura y permisos mínimos. Restringir la lista de IPs siempre que sea posible; `0.0.0.0/0` permite conexiones desde cualquier IP y debe evitarse si se puede configurar una restricción más precisa.
+4. Desplegar y revisar los logs de Vercel. La primera solicitud inicializa la conexión a MongoDB y crea el administrador si todavía no existe.
+
+El chat entre usuarios consulta mensajes nuevos cada tres segundos mediante HTTP; no depende de conexiones WebSocket persistentes, que no forman parte del despliegue serverless de esta aplicación.
 
 ## Autenticación, JWT y cookies
 
@@ -206,6 +217,14 @@ El limitador usa memoria local al proceso. Es suficiente para una instancia úni
 - `GET /registro` y `POST /registro` — Alta pública de un profesional con su ficha y cuenta.
 - `GET /login` y `POST /login` — Inicio de sesión para administradores y profesionales; si es válido, `POST /login` establece la cookie JWT.
 - `POST /logout` — Revoca en MongoDB el JWT actual y elimina su cookie del navegador.
+
+### Mensajes (`/mensajes`)
+- `GET /` — Renderiza la página de chat para usuarios autenticados.
+- `GET /:usuarioId` — Devuelve los últimos 100 mensajes de la conversación en orden cronológico.
+- `GET /:usuarioId?desde=<id>` — Devuelve hasta 100 mensajes posteriores al mensaje indicado; el navegador consulta este endpoint cada tres segundos para actualizar el chat.
+- `POST /` — Envía un mensaje a otro usuario autenticado. Recibe `destinatarioId` y `contenido` en JSON y devuelve el mensaje creado (`201 Created`).
+
+El envío y la consulta de mensajes requieren autenticación. No se usa Socket.IO; el chat funciona mediante solicitudes HTTP para ser compatible con Vercel.
 ---
 
 ## Códigos de estado HTTP utilizados
